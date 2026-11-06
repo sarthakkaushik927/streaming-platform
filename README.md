@@ -2,8 +2,8 @@
 
 Watch YouTube videos together in real time. When a host or moderator plays, pauses, seeks or changes the video, everyone in the room sees the same thing. Participants can ask for a change, and it only happens once a host or moderator approves it.
 
-**Live app:** LIVE_APP_URL
-**Backend API docs:** LIVE_API_URL/api-docs/
+**Live app:** https://syncstream-nine.vercel.app
+**Backend API docs:** https://syncstream-backend-dcc5.onrender.com/api-docs/
 
 ## Features
 
