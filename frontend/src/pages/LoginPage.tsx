@@ -44,7 +44,7 @@ export const LoginPage: React.FC = () => {
       <main className="relative z-10 w-full max-w-120 px-6">
         <div className="text-center mb-10">
           <Link to="/" className="inline-flex items-center gap-2.5 mb-3">
-            <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-lg">V</span>
+            <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-lg">S</span>
             <span className="font-display-lg text-[28px] text-on-surface tracking-tight">SyncStream</span>
           </Link>
           <p className="font-label-mono text-[11px] text-on-surface-variant uppercase tracking-widest">Real-time Cinematic Synchronization</p>

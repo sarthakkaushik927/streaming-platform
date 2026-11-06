@@ -69,7 +69,7 @@ export const LandingPage: React.FC = () => {
         {/* Mobile Header (clean full width bar) */}
         <div className="md:hidden flex items-center justify-between p-4 bg-frame text-cream-on-frame z-20">
           <Link to="/" className="text-cream-on-frame font-display-lg text-lg flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-xs shadow-sm">V</span>
+            <span className="w-7 h-7 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-xs shadow-sm">S</span>
             SYNCSTREAM
           </Link>
           <div className="flex items-center gap-2">
@@ -97,7 +97,7 @@ export const LandingPage: React.FC = () => {
         {/* Desktop CUTOUT: TOP LEFT (Logo) */}
         <div className="hidden md:block absolute top-0 left-0 bg-frame rounded-br-4xl p-6 pr-10 pb-8 z-20">
           <Link to="/" className="text-cream-on-frame font-display-lg text-2xl flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-xs shadow-sm">V</span>
+            <span className="w-7 h-7 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-xs shadow-sm">S</span>
             SYNCSTREAM
           </Link>
           <InvertedCorner className="top-0 -right-8 rounded-tl-4xl shadow-[-16px_-16px_0_16px_var(--frame)]" />

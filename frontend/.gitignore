@@ -23,6 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Cloned backend
-backend/
+# Environment files
+.env
+.env.*
+!.env.example
 
