@@ -5,6 +5,7 @@ import { useRoom } from '../../hooks/useRoom';
 import { Role } from '../../types/participant';
 import { Button } from '../shared/Button';
 import { extractYouTubeVideoId } from '../../utils/youtube';
+import { describeChange } from '../../utils/changeRequest';
 import env from '../../config/env';
 import {
   Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX,
@@ -33,6 +34,7 @@ interface YouTubeSearchItem {
 
 const REACTION_EMOJIS = ['🔥', '❤️', '👏', '🎉', '😮', '🚀'];
 
+
 interface YouTubeWebsiteProps {
   onChangeVideoClick?: () => void;
   onSendReaction?: (emoji: string) => void;
@@ -40,7 +42,7 @@ interface YouTubeWebsiteProps {
 
 export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoClick, onSendReaction }) => {
   const { playerState, play, pause, seek, changeVideo } = usePlayer();
-  const { room, participants, selfId } = useRoom();
+  const { room, participants, selfId, requestChange, myPendingRequest } = useRoom();
 
   // ── react-youtube player ref (the actual YT player API object) ──
   const playerRef = useRef<YouTubePlayer | null>(null);
@@ -78,7 +80,9 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
   const onPlayerReady: YouTubeProps['onReady'] = (event) => {
     playerRef.current = event.target;
     try {
-      event.target.seekTo(playerState.currentTime, true);
+      // The room kept playing while this player loaded, so include the time that has passed since.
+      const elapsedSeconds = playerState.state === 'playing' ? (Date.now() - playerState.timestamp) / 1000 : 0;
+      event.target.seekTo(playerState.currentTime + elapsedSeconds, true);
       if (playerState.state === 'playing') event.target.playVideo();
     } catch {
       // The YouTube player throws if its iframe isn't ready; the next sync event corrects it.
@@ -139,22 +143,24 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
     }
   };
 
+  // Hosts and Moderators act directly; everyone else sends a request for approval.
   const handleManualPlay = () => {
-    if (!canControl) return;
+    if (!canControl) { requestChange({ action: 'PLAY' }); return; }
     const time = playerRef.current ? playerRef.current.getCurrentTime() : playerState.currentTime;
     play(time, activeVideoId);
   };
 
   const handleManualPause = () => {
-    if (!canControl) return;
+    if (!canControl) { requestChange({ action: 'PAUSE' }); return; }
     const time = playerRef.current ? playerRef.current.getCurrentTime() : playerState.currentTime;
     pause(time, activeVideoId);
   };
 
   const handleSeekOffset = (seconds: number) => {
-    if (!canControl) return;
     const current = playerRef.current ? playerRef.current.getCurrentTime() : playerState.currentTime;
-    seek(Math.max(0, current + seconds), activeVideoId);
+    const target = Math.max(0, current + seconds);
+    if (!canControl) { requestChange({ action: 'SEEK', currentTime: target }); return; }
+    seek(target, activeVideoId);
   };
 
   // ── YouTube search ──
@@ -187,9 +193,9 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
   }, [searchQuery, performSearch]);
 
   const handleVideoSelect = useCallback((videoId: string) => {
-    if (!canControlRef.current) return;
+    if (!canControlRef.current) { requestChange({ action: 'CHANGE_VIDEO', videoId }); return; }
     changeVideo(videoId);
-  }, [changeVideo]);
+  }, [changeVideo, requestChange]);
 
   const isPlaying = playerState.state === 'playing';
 
@@ -237,14 +243,14 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
         <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-surface-container dark:bg-black border-t border-outline dark:border-white/10">
           <div className="flex items-center gap-2 flex-wrap">
             {isPlaying ? (
-              <Button variant="primary" onClick={handleManualPause} disabled={!canControl} icon={<Pause className="w-4 h-4" />}>Pause</Button>
+              <Button variant="primary" onClick={handleManualPause} icon={<Pause className="w-4 h-4" />}>{canControl ? 'Pause' : 'Request Pause'}</Button>
             ) : (
-              <Button variant="primary" onClick={handleManualPlay} disabled={!canControl} icon={<Play className="w-4 h-4" />}>Play</Button>
+              <Button variant="primary" onClick={handleManualPlay} icon={<Play className="w-4 h-4" />}>{canControl ? 'Play' : 'Request Play'}</Button>
             )}
-            <button onClick={() => handleSeekOffset(-10)} disabled={!canControl} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white disabled:opacity-40 transition-all font-label-mono text-xs font-semibold shadow-xs" title="Rewind 10s">
+            <button onClick={() => handleSeekOffset(-10)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white transition-all font-label-mono text-xs font-semibold shadow-xs" title={canControl ? 'Rewind 10s' : 'Request to rewind 10s'}>
               <RotateCcw className="w-3.5 h-3.5 text-primary" /> -10s
             </button>
-            <button onClick={() => handleSeekOffset(10)} disabled={!canControl} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white disabled:opacity-40 transition-all font-label-mono text-xs font-semibold shadow-xs" title="Forward 10s">
+            <button onClick={() => handleSeekOffset(10)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white transition-all font-label-mono text-xs font-semibold shadow-xs" title={canControl ? 'Forward 10s' : 'Request to forward 10s'}>
               <RotateCw className="w-3.5 h-3.5 text-primary" /> +10s
             </button>
             <button onClick={toggleMute} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white transition-all font-label-mono text-xs font-semibold shadow-xs" title={isMuted ? 'Unmute' : 'Mute'}>
@@ -257,13 +263,20 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
               ID: <span className="text-primary font-bold">{activeVideoId}</span>
             </span>
             {onChangeVideoClick && (
-              <Button variant="outline" onClick={onChangeVideoClick} disabled={!canControl} icon={<Video className="w-4 h-4" />}>Change Video</Button>
+              <Button variant="outline" onClick={onChangeVideoClick} icon={<Video className="w-4 h-4" />}>{canControl ? 'Change Video' : 'Request Video Change'}</Button>
             )}
             <button onClick={handleFullscreen} className="flex items-center justify-center p-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white transition-all shadow-xs" title="Toggle Fullscreen">
               <Maximize className="w-4 h-4 text-primary" />
             </button>
           </div>
         </div>
+
+        {/* Pending request notice */}
+        {myPendingRequest && (
+          <div role="status" className="px-4 py-2 bg-surface dark:bg-black border-t border-outline dark:border-white/10 font-body-md text-xs text-on-surface dark:text-white">
+            Waiting for a host or moderator to approve your request to {describeChange(myPendingRequest)}.
+          </div>
+        )}
 
         {/* Reactions row */}
         {onSendReaction && (

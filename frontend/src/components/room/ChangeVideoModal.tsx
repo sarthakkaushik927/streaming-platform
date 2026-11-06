@@ -3,6 +3,8 @@ import { Modal } from '../shared/Modal';
 import { Input } from '../shared/Input';
 import { Button } from '../shared/Button';
 import { usePlayer } from '../../hooks/usePlayer';
+import { useRoom } from '../../hooks/useRoom';
+import { Role } from '../../types/participant';
 import { extractYouTubeVideoId } from '../../utils/youtube';
 
 interface ChangeVideoModalProps {
@@ -14,6 +16,10 @@ export const ChangeVideoModal: React.FC<ChangeVideoModalProps> = ({ isOpen, onCl
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const { changeVideo } = usePlayer();
+  const { participants, selfId, requestChange } = useRoom();
+
+  const currentUserRole = participants.find(p => String(p.userId) === String(selfId))?.role;
+  const canControl = currentUserRole === Role.HOST || currentUserRole === Role.MODERATOR;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,14 +31,18 @@ export const ChangeVideoModal: React.FC<ChangeVideoModalProps> = ({ isOpen, onCl
       return;
     }
     
-    changeVideo(videoId);
+    if (canControl) {
+      changeVideo(videoId);
+    } else {
+      requestChange({ action: 'CHANGE_VIDEO', videoId });
+    }
     setUrl('');
     setError('');
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Change YouTube Video">
+    <Modal isOpen={isOpen} onClose={onClose} title={canControl ? 'Change YouTube Video' : 'Request a Video Change'}>
       <form onSubmit={handleSubmit} className="space-y-6">
         <Input
           label="YOUTUBE URL OR VIDEO ID"
@@ -49,7 +59,7 @@ export const ChangeVideoModal: React.FC<ChangeVideoModalProps> = ({ isOpen, onCl
         <div className="flex gap-4 pt-2">
           <Button type="button" variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
           <Button type="submit" variant="primary" className="flex-1" disabled={!url.trim()}>
-            Update Video
+            {canControl ? 'Update Video' : 'Send Request'}
           </Button>
         </div>
       </form>
