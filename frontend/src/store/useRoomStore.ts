@@ -3,10 +3,17 @@ import { Room } from '../types/room';
 import { Participant, RawParticipant, Role } from '../types/participant';
 import { PlayerState } from '../types/player';
 import { ChatMessage, RawChatMessage } from '../types/chat';
+import { ToastType } from '../components/shared/toastContext';
 import {
+  ChangeRequest,
+  ChangeRequestsPayload,
+  ChangeRequestStatusPayload,
+  ErrorEventPayload,
   HostTransferredPayload,
+  KickedPayload,
   ParticipantListPayload,
   ParticipantRemovedPayload,
+  PlaybackChange,
   PlaybackPayload,
   RawPlaybackState,
   ReactionPayload,
@@ -59,6 +66,13 @@ interface RoomState {
   messages: ChatMessage[];
   reactions: ReactionItem[];
   isLoading: boolean;
+  changeRequests: ChangeRequest[];
+  myPendingRequest: PlaybackChange | null;
+  notice: { message: string; type: ToastType } | null;
+  wasRemoved: boolean;
+  requestChange: (change: PlaybackChange) => void;
+  reviewChange: (requestId: string, approved: boolean) => void;
+  clearNotice: () => void;
   joinRoom: (roomId: string) => Promise<void>;
   leaveRoom: () => void;
   assignRole: (userId: string, role: Role) => void;
@@ -189,8 +203,35 @@ export const useRoomStore = create<RoomState>((set, get) => {
     set((state) => ({ reactions: [...state.reactions.slice(-15), reactionItem] }));
   };
 
-  const handleKicked = () => {
+  const handleKicked = (payload?: KickedPayload) => {
     get().leaveRoom();
+    set({
+      wasRemoved: true,
+      notice: { message: payload?.message || 'You were removed from this room by the host.', type: 'error' },
+    });
+  };
+
+  const handleErrorEvent = (payload: ErrorEventPayload) => {
+    if (payload?.message) set({ notice: { message: payload.message, type: 'error' } });
+  };
+
+  const handleChangeRequests = (payload: ChangeRequestsPayload) => {
+    set({ changeRequests: payload?.requests || [] });
+  };
+
+  const handleChangeRequestStatus = (payload: ChangeRequestStatusPayload) => {
+    if (payload.status === 'PENDING') {
+      const { action, currentTime, videoId } = payload;
+      set({ myPendingRequest: { action, currentTime, videoId } });
+      return;
+    }
+
+    set({ myPendingRequest: null });
+    if (payload.status === 'APPROVED') {
+      set({ notice: { message: 'Your request was approved.', type: 'success' } });
+    } else if (payload.status === 'DECLINED') {
+      set({ notice: { message: 'Your request was declined.', type: 'error' } });
+    }
   };
 
   const handleHostTransferred = (payload: HostTransferredPayload) => {
@@ -219,6 +260,9 @@ export const useRoomStore = create<RoomState>((set, get) => {
   socketService.on('reaction', handleReaction);
   socketService.on('kicked', handleKicked);
   socketService.on('host_transferred', handleHostTransferred);
+  socketService.on('error_event', handleErrorEvent);
+  socketService.on('change_requests_updated', handleChangeRequests);
+  socketService.on('change_request_status', handleChangeRequestStatus);
 
   return {
     room: null,
@@ -227,6 +271,23 @@ export const useRoomStore = create<RoomState>((set, get) => {
     messages: [],
     reactions: [],
     isLoading: false,
+    changeRequests: [],
+    myPendingRequest: null,
+    notice: null,
+    wasRemoved: false,
+
+    requestChange: (change: PlaybackChange) => {
+      socketService.emit('request_change', change);
+    },
+
+    reviewChange: (requestId: string, approved: boolean) => {
+      socketService.emit('review_change', { requestId, approved });
+    },
+
+    clearNotice: () => {
+      set({ notice: null });
+    },
+
     playerState: {
       videoId: null,
       state: 'unstarted',
@@ -261,7 +322,7 @@ export const useRoomStore = create<RoomState>((set, get) => {
         return;
       }
 
-      set({ isLoading: true });
+      set({ isLoading: true, wasRemoved: false });
       try {
         const roomData = await roomService.joinRoom({ roomId });
         set({ room: roomData });
@@ -307,7 +368,7 @@ set({ room: null, participants: [], messages: [], selfId: null, reactions: [] })
         socketService.emit('leave_room', { roomId: currentRoom.id });
         socketService.disconnect();
       }
-      set({ room: null, participants: [], messages: [], selfId: null });
+      set({ room: null, participants: [], messages: [], selfId: null, changeRequests: [], myPendingRequest: null });
     },
 
     assignRole: (userId: string, role: Role) => {

@@ -58,3 +58,35 @@ export interface HostTransferredPayload {
   previousHostId?: string;
   participants?: RawParticipant[];
 }
+
+export interface KickedPayload {
+  message?: string;
+}
+
+export interface ErrorEventPayload {
+  message?: string;
+}
+
+export type PlaybackAction = 'PLAY' | 'PAUSE' | 'SEEK' | 'CHANGE_VIDEO';
+
+export interface PlaybackChange {
+  action: PlaybackAction;
+  currentTime?: number;
+  videoId?: string;
+}
+
+export interface ChangeRequest extends PlaybackChange {
+  id: string;
+  requesterId: string;
+  requesterName: string;
+  createdAt: string;
+}
+
+export interface ChangeRequestsPayload {
+  requests?: ChangeRequest[];
+}
+
+export interface ChangeRequestStatusPayload extends PlaybackChange {
+  requestId: string;
+  status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'CANCELLED';
+}
