@@ -19,24 +19,26 @@ const NAV_LINKS = [
 
 const SHRINK_AFTER_PX = 24;
 
-// Desktop link. The active one carries a yellow bar that slides over when you change page.
+// Desktop link. The active one sits on a yellow ticket tab that slides over when you change page.
 const DesktopLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to, children }) => (
   <NavLink
     to={to}
     className={({ isActive }) =>
-      `label-caps relative inline-flex min-h-11 items-center px-3 transition-colors ${isActive ? 'text-accent' : 'text-muted hover:text-ink'}`
+      `relative inline-flex min-h-10 items-center rounded-sm px-3.5 text-sm font-semibold tracking-[0.12em] uppercase transition-colors ${
+        isActive ? 'text-marquee-ink' : 'text-ink hover:bg-subtle hover:text-accent'
+      }`
     }
   >
     {({ isActive }) => (
       <>
-        {children}
         {isActive && (
           <motion.span
-            layoutId="nav-active-bar"
+            layoutId="nav-active-tab"
             transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-            className="absolute inset-x-3 bottom-1.5 h-0.5 bg-accent"
+            className="absolute inset-0 rounded-sm bg-marquee shadow-[3px_3px_0_var(--curtain)]"
           />
         )}
+        <span className="relative">{children}</span>
       </>
     )}
   </NavLink>
@@ -169,7 +171,7 @@ export const Navbar: React.FC = () => {
         <div className={`page-x flex items-center justify-between gap-4 transition-[height] duration-300 ${isCompact ? 'h-13' : 'h-16'}`}>
           <div className="flex items-center gap-6">
             <Logo />
-            <nav aria-label="Main" className="hidden items-center md:flex">
+            <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
               {NAV_LINKS.map((link) => (
                 <DesktopLink key={link.path} to={link.path}>
                   {link.name}

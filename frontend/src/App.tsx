@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
+import { SplashScreen } from './components/shared/SplashScreen';
 import { ToastProvider } from './components/shared/Toast';
 import { AppRouter } from './router';
 import { useThemeStore } from './store/useThemeStore';
@@ -33,6 +34,7 @@ function App() {
           <AppRouter />
         </ToastProvider>
       </BrowserRouter>
+      <SplashScreen />
     </MotionConfig>
   );
 }
