@@ -19,6 +19,10 @@ async function startServer() {
     // Create the app's own schema, then any missing tables inside it. Nothing outside it is changed.
     await sequelize.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
     await sequelize.sync({ alter: false });
+
+    // sync() doesn't add columns to existing tables, so add this one to rooms created before it existed.
+    await sequelize.query(`ALTER TABLE "${schema}"."rooms" ADD COLUMN IF NOT EXISTS "created_by" UUID`);
+    await sequelize.query(`UPDATE "${schema}"."rooms" SET "created_by" = "host_id" WHERE "created_by" IS NULL`);
     logger.info('"server.js","startServer()","Database models synchronized"');
 
     const server = http.createServer(app);

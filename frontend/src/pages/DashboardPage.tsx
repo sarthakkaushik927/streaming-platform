@@ -7,9 +7,12 @@ import { JoinRoomModal } from '../components/dashboard/JoinRoomModal';
 import { roomService } from '../services/room.service';
 import { Room } from '../types/room';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+import { getErrorMessage } from '../utils/error';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -39,8 +42,9 @@ export const DashboardPage: React.FC = () => {
     try {
       await roomService.deleteRoom(roomId);
       setRooms(prev => prev.filter(r => r.id !== roomId));
+      showToast('Room deleted.', 'success');
     } catch (err) {
-      console.error('Failed to delete room', err);
+      showToast(getErrorMessage(err, 'Failed to delete room'), 'error');
     }
   };
 

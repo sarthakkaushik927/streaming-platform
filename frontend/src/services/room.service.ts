@@ -36,6 +36,7 @@ class RoomService {
       name: String(title),
       title: String(title),
       hostId: String(hostId),
+      createdBy: data?.createdBy,
       createdAt: data?.createdAt || data?.created_at || new Date().toISOString(),
       isPrivate: data?.isPrivate ?? false,
       participantCount: data?.participantCount ?? data?.participants?.length ?? 0,
@@ -109,8 +110,7 @@ class RoomService {
       const currentUserId = user?.id || user?.username || '';
       const all = await this.listAllRooms();
       if (!currentUserId) return all;
-      const mine = all.filter(r => String(r.hostId) === String(currentUserId));
-      return mine.length > 0 ? mine : all.filter(r => String(r.hostId) === String(currentUserId));
+      return all.filter(r => String(r.hostId) === String(currentUserId) || String(r.createdBy) === String(currentUserId));
     } catch (err) {
       console.warn('listMyRooms failed', err);
       return Object.values(this.mockRooms);
@@ -156,13 +156,8 @@ class RoomService {
 
   async deleteRoom(roomId: string): Promise<void> {
     if (!roomId || roomId === 'undefined') return;
-    try {
-      await apiClient.delete(`/rooms/${roomId}`);
-    } catch (err) {
-      console.warn(`Real deleteRoom API call failed, using local list`, err);
-    } finally {
-      delete this.mockRooms[roomId];
-    }
+    await apiClient.delete(`/rooms/${roomId}`);
+    delete this.mockRooms[roomId];
   }
 }
 

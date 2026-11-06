@@ -75,16 +75,8 @@ export const ExplorePage: React.FC = () => {
             {filteredRooms.map(room => (
               <GlassCard key={room.id} className="p-6 flex flex-col justify-between hover:border-primary/30 transition-colors">
                 <div>
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="mb-4">
                     <span className="text-3xl">🎬</span>
-                    <span className={`inline-flex items-center gap-1.5 font-label-caps text-[10px] px-2.5 py-1 rounded-full border ${
-                      room.isPrivate
-                        ? 'bg-error/10 text-error border-error/30'
-                        : 'bg-tertiary/10 text-tertiary border-tertiary/30'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${room.isPrivate ? 'bg-error' : 'bg-tertiary'}`} />
-                      {room.isPrivate ? 'PRIVATE' : 'PUBLIC'}
-                    </span>
                   </div>
 
                   <h3 className="font-headline-sm text-lg text-on-surface mb-2 leading-snug">{room.name}</h3>

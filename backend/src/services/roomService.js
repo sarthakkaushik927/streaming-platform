@@ -3,6 +3,7 @@ const { Room, User, Participant, ChatMessage, PlaybackLog } = require('../models
 const createRoom = async (hostId, title, initialVideoId) => {
   const room = await Room.create({
     hostId,
+    createdBy: hostId,
     title,
     currentVideoId: initialVideoId || 'dQw4w9WgXcQ'
   });
@@ -97,9 +98,9 @@ const deleteRoom = async (roomId, userId) => {
     return { status: 404, message: 'Room not found.' };
   }
 
-  // Only the host can delete the room
-  if (room.hostId !== userId) {
-    return { status: 403, message: 'Permission Denied: Only the Host can delete this room.' };
+  // Only the current host or the room's creator can delete it
+  if (room.hostId !== userId && room.createdBy !== userId) {
+    return { status: 403, message: 'Permission Denied: Only the Host or creator can delete this room.' };
   }
 
   // Delete related data first to prevent foreign key errors

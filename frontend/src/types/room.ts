@@ -13,6 +13,7 @@ export interface Room {
   name: string;
   title?: string;
   hostId: string;
+  createdBy?: string;
   createdAt: string;
   isPrivate: boolean;
   participantCount?: number;
@@ -29,6 +30,7 @@ export interface RawRoomResponse {
   host_id?: string | RawRoomHost;
   host?: string | RawRoomHost;
   owner?: string | RawRoomHost;
+  createdBy?: string;
   createdAt?: string;
   created_at?: string;
   isPrivate?: boolean;

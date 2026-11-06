@@ -12,6 +12,11 @@ const Room = db.define('rooms', {
     allowNull: false,
     field: 'host_id'
   },
+  // Stays the same when the host role moves to someone else.
+  createdBy: {
+    type: DataTypes.UUID,
+    field: 'created_by'
+  },
   title: {
     type: DataTypes.STRING(100),
     allowNull: false
