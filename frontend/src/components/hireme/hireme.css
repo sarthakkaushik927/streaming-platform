@@ -1,0 +1,246 @@
+@keyframes hireme-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hireme-clip-reveal {
+  from {
+    clip-path: inset(100% 0 0 0);
+    opacity: 0;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+@keyframes hireme-chip-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes hireme-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes hireme-scroll-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(8px);
+    opacity: 1;
+  }
+}
+
+@keyframes hireme-float-1 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(12px, -18px) rotate(8deg);
+  }
+}
+
+@keyframes hireme-float-2 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(-10px, 14px) rotate(-6deg);
+  }
+}
+
+@keyframes hireme-float-3 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(8px, 10px) rotate(12deg);
+  }
+}
+
+@keyframes hireme-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.hireme-reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hireme-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hireme-clip-reveal {
+  clip-path: inset(100% 0 0 0);
+  opacity: 0;
+  transition: clip-path 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hireme-clip-reveal.is-visible {
+  clip-path: inset(0 0 0 0);
+  opacity: 1;
+}
+
+.hireme-chip {
+  opacity: 0;
+  transform: scale(0.7) translateY(10px);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hireme-chip.is-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.hireme-marquee-track {
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  animation: hireme-marquee 30s linear infinite;
+}
+
+.hireme-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.hireme-scroll-indicator {
+  animation: hireme-scroll-bounce 2s ease-in-out infinite;
+}
+
+.hireme-float-accent-1 {
+  animation: hireme-float-1 6s ease-in-out infinite;
+}
+
+.hireme-float-accent-2 {
+  animation: hireme-float-2 8s ease-in-out infinite;
+}
+
+.hireme-float-accent-3 {
+  animation: hireme-float-3 7s ease-in-out infinite;
+}
+
+.hireme-magnetic-btn {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hireme-tilt-card {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.hireme-timeline {
+  position: relative;
+}
+
+.hireme-timeline-line {
+  stroke: var(--tertiary);
+  stroke-width: 3;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.hireme-timeline-line-bg {
+  stroke: var(--outline);
+  stroke-width: 3;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.hireme-timeline-step {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hireme-timeline-step.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hireme-pulse-ring {
+  animation: hireme-pulse-ring 2s ease-out infinite;
+}
+
+@media (max-width: 768px) {
+  .hireme-timeline-horizontal {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hireme-timeline-svg-horizontal {
+    display: none;
+  }
+
+  .hireme-timeline-svg-vertical {
+    display: block;
+  }
+}
+
+@media (min-width: 769px) {
+  .hireme-timeline-svg-vertical {
+    display: none;
+  }
+
+  .hireme-timeline-svg-horizontal {
+    display: block;
+  }
+}
+
+@keyframes hireme-blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes chatbot-dot-pulse {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.chatbot-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: chatbot-dot-pulse 1.4s ease-in-out infinite;
+}
