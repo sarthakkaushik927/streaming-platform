@@ -1,8 +1,11 @@
 const MAX_MESSAGE_LENGTH = 4000;
 const MAX_HISTORY_MESSAGES = 20;
+// Groq retires models from time to time, so the model is a setting. llama-3.3-70b-versatile was retired.
+const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
 const CONTEXT = `
 You are an AI assistant for Sarthak Sharma and WEB 3 TASK PRIVATE LIMITED. Use the following context to answer questions when relevant.
+Replies appear in a small chat window, so keep them short: a few sentences or a short list, without tables.
 
 Context about Sarthak Sharma:
 - Email: sarthakkaushik927@gmail.com, Mobile: +91-7060321453, Location: Ghaziabad, India
@@ -63,10 +66,13 @@ const chat = async (req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile',
+                model: GROQ_MODEL,
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 1024
+                max_tokens: 2048,
+                // gpt-oss thinks before answering; keep that short and out of the reply.
+                reasoning_effort: 'low',
+                include_reasoning: false
             })
         });
 
