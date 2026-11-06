@@ -26,7 +26,7 @@ Three rules hold the whole thing together:
 
 Every colour in a component comes from a token. Never write a hex code in a component, except the fixed poster colours below.
 
-| Token | Dark (default) | Light | Used for |
+| Token | Dark | Light (default) | Used for |
 |---|---|---|---|
 | `canvas` | `#0e0b08` cinema black | `#f4ebdd` ticket cream | page background |
 | `card` | `#18130e` | `#fbf6ec` | cards, panels, modals |
@@ -237,8 +237,8 @@ The first redesign looked machine-made, and most of that came from patterns, not
 
 ## 10. Themes
 
-- **Dark is the default** for SyncStream, the cinema at night. The saved preference uses a new key (`syncstream-theme`), so everyone started on dark once after the redesign.
-- **Light** is a matinee printed on ticket cream: same layout, `accent` becomes deep red, tickets invert to dark paper.
+- **Light is the default** for SyncStream: a matinee printed on ticket cream. The saved preference uses a new key (`syncstream-theme-v2`), so everyone starts on light once, even if an earlier visit saved dark.
+- **Dark** is the cinema at night: same layout, `accent` becomes marquee yellow, tickets turn into cream paper.
 - Every new colour needs a value in both themes, or must be one of the fixed poster colours.
 
 ---

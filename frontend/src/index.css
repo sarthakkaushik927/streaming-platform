@@ -2,10 +2,9 @@
 
 /*
   Design tokens: every colour in the app comes from here, so a theme change is one edit.
-  Dark is the default: a cinema at night. Light is a matinee printed on ticket cream.
+  Light is the default: a matinee printed on ticket cream. Dark is a cinema at night.
   --accent is for interactive things; --marquee and --curtain are decoration that stays the same in both themes.
 */
-:root,
 html.dark {
   --canvas: #0e0b08;
   --card: #18130e;
@@ -31,6 +30,7 @@ html.dark {
     radial-gradient(ellipse 120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55));
 }
 
+:root,
 html.light {
   --canvas: #f4ebdd;
   --card: #fbf6ec;
@@ -54,13 +54,13 @@ html.light {
 }
 
 /* Paper tickets: cream on the dark theme, inverted on the light one, so they always stand out. */
-:root,
 html.dark {
   --ticket: #f1e6d2;
   --ticket-ink: #0e0b08;
   --ticket-muted: #5f5345;
 }
 
+:root,
 html.light {
   --ticket: #1b150f;
   --ticket-ink: #f4ebdd;
