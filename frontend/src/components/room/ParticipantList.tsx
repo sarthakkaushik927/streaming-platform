@@ -3,10 +3,12 @@ import { Role } from '../../types/participant';
 import { RoleBadge } from '../shared/RoleBadge';
 
 import { useRoom } from '../../hooks/useRoom';
+import { useParticipants } from '../../hooks/useParticipants';
 
 export const ParticipantList: React.FC = () => {
   const { participants, assignRole, selfId } = useRoom();
-  
+  const { removeParticipant } = useParticipants();
+
   // Sort: Host first, then Mods, then Participants, then Viewers
   const roleWeight = {
     [Role.HOST]: 1,
@@ -22,6 +24,18 @@ export const ParticipantList: React.FC = () => {
   const currentUserRole = participants.find(p => String(p.userId) === String(selfId))?.role;
   const isCurrentUserHost = currentUserRole === Role.HOST;
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+
+  const handleRemoveClick = (userId: string) => {
+    // Removal is permanent for this room, so it takes a second click.
+    if (confirmRemoveId !== userId) {
+      setConfirmRemoveId(userId);
+      return;
+    }
+    removeParticipant(userId);
+    setConfirmRemoveId(null);
+    setOpenMenuId(null);
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-room-card-bg text-room-card-text rounded-3xl shadow-[0_0_15px_rgba(var(--color-primary),0.15)] overflow-hidden border border-outline dark:p-0.75">
@@ -53,7 +67,11 @@ export const ParticipantList: React.FC = () => {
               {isCurrentUserHost && String(participant.userId) !== String(selfId) && (
                 <div className="relative">
                   <button 
-                    onClick={() => setOpenMenuId(openMenuId === participant.userId ? null : participant.userId)}
+                    onClick={() => {
+                      setOpenMenuId(openMenuId === participant.userId ? null : participant.userId);
+                      setConfirmRemoveId(null);
+                    }}
+                    aria-label={`Manage ${participant.username}`}
                     className="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant"
                   >
                     <span className="material-symbols-outlined text-sm">more_vert</span>
@@ -80,6 +98,13 @@ export const ParticipantList: React.FC = () => {
                       >
                         <span className="material-symbols-outlined text-xs text-on-surface-variant">visibility</span>
                         Make Viewer
+                      </button>
+                      <button
+                        onClick={() => handleRemoveClick(participant.userId)}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-error"
+                      >
+                        <span className="material-symbols-outlined text-xs">person_remove</span>
+                        {confirmRemoveId === participant.userId ? 'Confirm remove' : 'Remove from room'}
                       </button>
                     </div>
                   )}
