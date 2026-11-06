@@ -156,6 +156,7 @@ The frontend runs on Vercel, the backend runs on Render, and the PostgreSQL data
 - [REST API](docs/API.md)
 - [Database](docs/DATABASE.md)
 - [Deployment](docs/DEPLOYMENT.md)
+- [Deployment on AWS](docs/DEPLOYMENT-AWS.md) (optional)
 
 ## Trade-offs and limitations
 

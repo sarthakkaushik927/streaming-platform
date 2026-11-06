@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.*
+.vercel
+.vercelignore
+vercel.json
+api
+watch-party-logs
+docker-compose.yml
+Dockerfile
+.dockerignore
+README.md
+youtube_watch_party_api.postman_collection.json

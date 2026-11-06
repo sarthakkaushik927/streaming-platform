@@ -1,6 +1,6 @@
 # Deployment
 
-The frontend runs on Vercel, the backend runs on Render, and the database runs on Neon.
+The frontend runs on Vercel, the backend runs on Render, and the database runs on Neon. To run the backend on AWS instead, see the [AWS guide](DEPLOYMENT-AWS.md).
 
 ## Database
 
