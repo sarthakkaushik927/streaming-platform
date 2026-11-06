@@ -180,13 +180,11 @@ const registerSocketHandlers = (io) => {
           if (existingParticipant) {
             role = existingParticipant.role;
           } else {
-            // Persist new participant to database
-            await DBParticipant.create({
-              roomId,
-              userId: user.id,
-              role: Role.PARTICIPANT,
-              status: 'ACTIVE'
-            });
+            // Persist new participant. A page load can send two joins at once, so ignore a duplicate row.
+            await DBParticipant.bulkCreate(
+              [{ roomId, userId: user.id, role: Role.PARTICIPANT, status: 'ACTIVE' }],
+              { ignoreDuplicates: true }
+            );
           }
         }
 
