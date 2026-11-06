@@ -8,6 +8,10 @@ const { swaggerUi, swaggerSpec } = require('./src/config/swagger.js');
 
 const app = express();
 
+// NGINX runs on the same host, so read the client IP from X-Forwarded-For only for
+// loopback connections. Rate limits then apply per visitor, and direct callers can't spoof it.
+app.set('trust proxy', 'loopback');
+
 // Security HTTP headers (bypassing CSP for Swagger UI compatibility)
 app.use(helmet({
   contentSecurityPolicy: false

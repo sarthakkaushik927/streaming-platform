@@ -24,7 +24,20 @@ const otpLimiter = rateLimit({
   }
 });
 
+// Public chatbot limiter: each request spends Groq credit, 20 requests per 1 minute
+const chatLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many chat requests. Please try again after 1 minute.'
+  }
+});
+
 module.exports = {
   standardLimiter,
-  otpLimiter
+  otpLimiter,
+  chatLimiter
 };

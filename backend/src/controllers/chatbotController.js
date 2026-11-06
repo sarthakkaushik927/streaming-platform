@@ -1,4 +1,5 @@
-const fetch = require('node-fetch') || global.fetch;
+const MAX_MESSAGE_LENGTH = 4000;
+const MAX_HISTORY_MESSAGES = 20;
 
 const CONTEXT = `
 You are an AI assistant for Sarthak Sharma and WEB 3 TASK PRIVATE LIMITED. Use the following context to answer questions when relevant.
@@ -23,12 +24,25 @@ Context about WEB 3 TASK PRIVATE LIMITED:
   - Pulkit Sharma (CFO): Strategic mind ensuring long-term viability.
 `;
 
+// Keep only real conversation turns so callers can't add their own system instructions
+const sanitizeHistory = (history) => {
+    if (!Array.isArray(history)) return [];
+    return history
+        .filter((m) => ['user', 'assistant'].includes(m?.role) && typeof m.content === 'string')
+        .slice(-MAX_HISTORY_MESSAGES)
+        .map(({ role, content }) => ({ role, content: content.slice(0, MAX_MESSAGE_LENGTH) }));
+};
+
 const chat = async (req, res) => {
     try {
-        const { message, history = [] } = req.body;
-        
-        if (!message) {
+        const { message, history } = req.body;
+
+        if (typeof message !== 'string' || !message.trim()) {
             return res.status(400).json({ success: false, message: 'Message is required' });
+        }
+
+        if (message.length > MAX_MESSAGE_LENGTH) {
+            return res.status(400).json({ success: false, message: `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer` });
         }
 
         const apiKey = process.env.GROQ_API_KEY;
@@ -38,7 +52,7 @@ const chat = async (req, res) => {
 
         const messages = [
             { role: 'system', content: CONTEXT },
-            ...history,
+            ...sanitizeHistory(history),
             { role: 'user', content: message }
         ];
 
