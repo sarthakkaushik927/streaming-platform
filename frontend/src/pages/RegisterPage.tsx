@@ -7,6 +7,27 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { getErrorMessage } from '../utils/error';
 
+interface FieldErrors {
+  username?: string;
+  email?: string;
+  password?: string;
+}
+
+// Matches the rules the server enforces at signup.
+const validateAccountFields = (username: string, email: string, password: string): FieldErrors => {
+  const errors: FieldErrors = {};
+  if (username.length < 3 || username.length > 30) {
+    errors.username = 'Username must be 3 to 30 characters.';
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.email = 'Enter a valid email address.';
+  }
+  if (password.length < 8) {
+    errors.password = 'Password must be at least 8 characters.';
+  }
+  return errors;
+};
+
 export const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -17,6 +38,7 @@ export const RegisterPage: React.FC = () => {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const { register, sendOtp } = useAuth();
   const navigate = useNavigate();
@@ -32,16 +54,22 @@ export const RegisterPage: React.FC = () => {
     return () => clearInterval(timer);
   }, [countdown]);
 
+  // Shows problems under each field. Returns true when everything is valid.
+  const validateFields = () => {
+    const nextErrors = validateAccountFields(username, email, password);
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleChangeEmail = () => {
+    setOtpSent(false);
+    setOtp('');
+    setCountdown(0);
+  };
+
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!email) {
-      showToast('Please enter your email address first', 'error');
-      return;
-    }
-    if (!username || !password) {
-      showToast('Please fill in username and password', 'error');
-      return;
-    }
+    if (!validateFields()) return;
 
     setIsSendingOtp(true);
     try {
@@ -58,10 +86,7 @@ export const RegisterPage: React.FC = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !username) {
-      showToast('Please fill in all fields', 'error');
-      return;
-    }
+    if (!validateFields()) return;
     if (!otpSent) {
       handleSendOtp();
       return;
@@ -112,8 +137,11 @@ export const RegisterPage: React.FC = () => {
               type="text"
               placeholder="johndoe"
               value={username}
-              disabled={otpSent}
-              onChange={(e) => setUsername(e.target.value)}
+              error={fieldErrors.username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, username: undefined }));
+              }}
             />
             
             <Input 
@@ -123,18 +151,37 @@ export const RegisterPage: React.FC = () => {
               placeholder="name@example.com"
               value={email}
               disabled={otpSent}
-              onChange={(e) => setEmail(e.target.value)}
+              error={fieldErrors.email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              }}
             />
-            
+            {otpSent && (
+              <button
+                type="button"
+                onClick={handleChangeEmail}
+                className="font-label-mono text-xs text-primary font-bold hover:underline"
+              >
+                Change email
+              </button>
+            )}
+
             <Input 
               label="PASSWORD"
               icon="lock"
               type="password"
               placeholder="••••••••"
               value={password}
-              disabled={otpSent}
-              onChange={(e) => setPassword(e.target.value)}
+              error={fieldErrors.password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              }}
             />
+            {!fieldErrors.password && (
+              <p className="font-label-mono text-xs text-on-surface-variant">At least 8 characters</p>
+            )}
 
             {otpSent && (
               <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2">
