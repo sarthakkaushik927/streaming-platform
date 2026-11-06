@@ -2,6 +2,8 @@
 
 The frontend runs on Vercel, the backend runs on Render, and the database runs on Neon. To run the backend on AWS instead, see the [AWS guide](DEPLOYMENT-AWS.md).
 
+Pushing to `main` deploys automatically. Render redeploys the backend on every push, and each Vercel project rebuilds only when its own folder changed.
+
 ## Database
 
 Use a Neon PostgreSQL connection URL as `DATABASE_URL`, ideally in the same region as the backend. SyncStream keeps all its tables in its own `syncstream` schema, which it creates on startup, so it can share a database without changing any other tables.
@@ -27,7 +29,7 @@ Use a Neon PostgreSQL connection URL as `DATABASE_URL`, ideally in the same regi
 
 ## Signup email function (Vercel)
 
-Render's free plan may block outgoing email, so requests for signup codes go to a small function on Vercel at `/api/v1/auth/send-otp`. It stores the code in the shared database and emails it, and Render checks the code at signup. Deploy it as its own Vercel project from the `backend` folder.
+Render's free plan may block outgoing email, so requests for signup codes go to a small function on Vercel at `/api/v1/auth/send-otp`. It stores the code in the shared database and emails it, and Render checks the code at signup. It's a separate Vercel project connected to the same repo, with `backend` as its root directory.
 
 | Environment variable | Required | Notes |
 | --- | --- | --- |
@@ -40,12 +42,7 @@ Each email address can request a new code every 30 seconds.
 
 ## Frontend (Vercel)
 
-Deploy from the `frontend` folder:
-
-```bash
-cd frontend
-vercel --prod
-```
+A Vercel project connected to the GitHub repo, with `frontend` as its root directory.
 
 | Environment variable | Required | Notes |
 | --- | --- | --- |
