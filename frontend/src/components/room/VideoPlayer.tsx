@@ -34,6 +34,18 @@ interface YouTubeSearchItem {
 
 const REACTION_EMOJIS = ['🔥', '❤️', '👏', '🎉', '😮', '🚀'];
 
+// Must stay constant: react-youtube destroys and rebuilds the player whenever these change.
+const PLAYER_OPTIONS: YouTubeProps['opts'] = {
+  width: '100%',
+  height: '100%',
+  playerVars: {
+    autoplay: 0,
+    controls: 1,
+    modestbranding: 1,
+    rel: 0,
+    playsinline: 1,
+  },
+};
 
 interface YouTubeWebsiteProps {
   onChangeVideoClick?: () => void;
@@ -121,17 +133,17 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
   useEffect(() => {
     if (!playerRef.current || !activeVideoId) return;
 
-    if (playerState.state === 'playing') {
-      playerRef.current.playVideo();
-    } else if (playerState.state === 'paused') {
-      playerRef.current.pauseVideo();
-    }
-
     try {
+      if (playerState.state === 'playing') {
+        playerRef.current.playVideo();
+      } else if (playerState.state === 'paused') {
+        playerRef.current.pauseVideo();
+      }
+
       const diff = Math.abs(playerRef.current.getCurrentTime() - playerState.currentTime);
       if (diff > 2) playerRef.current.seekTo(playerState.currentTime, true);
     } catch {
-      // The YouTube player throws if its iframe isn't ready; the next sync event corrects it.
+      // The player throws while its iframe is loading or being replaced. onPlayerReady syncs it once it's ready.
     }
   }, [playerState.state, playerState.currentTime, playerState.videoId, activeVideoId]);
 
@@ -222,18 +234,7 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
           <YouTube
             key={activeVideoId}
             videoId={activeVideoId}
-            opts={{
-              width: '100%',
-              height: '100%',
-              playerVars: {
-                autoplay: isPlaying ? 1 : 0,
-                controls: 1,
-                disablekb: canControl ? 0 : 1,
-                modestbranding: 1,
-                rel: 0,
-                playsinline: 1,
-              },
-            }}
+            opts={PLAYER_OPTIONS}
             onReady={onPlayerReady}
             onStateChange={onStateChange}
             className="w-full h-full"
