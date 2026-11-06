@@ -1,12 +1,120 @@
+const { randomUUID } = require('crypto');
 const jwt = require('jsonwebtoken');
-const { User, Room: DBRoom, Participant: DBParticipant, ChatMessage, PlaybackLog } = require('../models');
+const { User, Room: DBRoom, Participant: DBParticipant, ChatMessage, PlaybackLog, RemovedParticipant } = require('../models');
 const RoomManager = require('./RoomManager.js');
 const { Participant, Role } = require('./Participant.js');
 const logger = require('../utilities/logger.js');
 
 const roomManager = RoomManager.getInstance();
 
+const PlaybackAction = {
+  PLAY: 'PLAY',
+  PAUSE: 'PAUSE',
+  SEEK: 'SEEK',
+  CHANGE_VIDEO: 'CHANGE_VIDEO'
+};
+
+const RequestStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  DECLINED: 'DECLINED',
+  CANCELLED: 'CANCELLED'
+};
+
+const YOUTUBE_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
+const REMOVED_MESSAGE = 'You were removed from this room by the host.';
+
+const canControlPlayback = (participant) =>
+  Boolean(participant) && (participant.role === Role.HOST || participant.role === Role.MODERATOR);
+
+// Builds a pending request from client input, or returns null if the input is invalid.
+const buildChangeRequest = ({ action, currentTime, videoId }, user) => {
+  const request = {
+    id: randomUUID(),
+    requesterId: user.id,
+    requesterName: user.username,
+    action,
+    createdAt: new Date().toISOString()
+  };
+
+  if (action === PlaybackAction.PLAY || action === PlaybackAction.PAUSE) return request;
+  if (action === PlaybackAction.SEEK && Number.isFinite(currentTime) && currentTime >= 0) {
+    return { ...request, currentTime };
+  }
+  if (action === PlaybackAction.CHANGE_VIDEO && typeof videoId === 'string' && YOUTUBE_ID_PATTERN.test(videoId)) {
+    return { ...request, videoId };
+  }
+  return null;
+};
+
 const registerSocketHandlers = (io) => {
+  // Single path for every playback change, whether made directly or approved from a request.
+  const applyPlaybackChange = async (room, actor, { action, currentTime, videoId }, audience) => {
+    const live = room.getLiveState();
+    const nextVideoId = videoId || live.videoId;
+
+    let nextTime = Number.isFinite(currentTime) ? currentTime : live.currentTime;
+    let nextIsPlaying = live.isPlaying;
+    if (action === PlaybackAction.PLAY) nextIsPlaying = true;
+    if (action === PlaybackAction.PAUSE) nextIsPlaying = false;
+    if (action === PlaybackAction.CHANGE_VIDEO) {
+      nextTime = 0;
+      nextIsPlaying = false;
+    }
+
+    room.updatePlayback(nextVideoId, nextTime, nextIsPlaying);
+
+    audience.emit('sync_state', {
+      isPlaying: nextIsPlaying,
+      currentTime: nextTime,
+      videoId: nextVideoId
+    });
+
+    await DBRoom.update(
+      { currentPlaybackTime: nextTime, isPlaying: nextIsPlaying, currentVideoId: nextVideoId },
+      { where: { id: room.id } }
+    );
+
+    await PlaybackLog.create({
+      roomId: room.id,
+      userId: actor.id,
+      action,
+      videoId: nextVideoId,
+      actionTimestamp: nextTime
+    });
+
+    logger.info(`"socketHandlers.js","applyPlaybackChange","Room ${room.id}: ${action} at ${nextTime}s by ${actor.username}"`);
+  };
+
+  // Only the Host and Moderators see pending requests; everyone else gets an empty list.
+  const syncChangeRequests = (room) => {
+    const requests = room.getChangeRequests();
+    for (const participant of room.participants.values()) {
+      io.to(participant.socketId).emit('change_requests_updated', {
+        requests: canControlPlayback(participant) ? requests : []
+      });
+    }
+  };
+
+  const sendRequestStatus = (room, request, status) => {
+    const requester = room.getParticipant(request.requesterId);
+    if (!requester) return;
+    io.to(requester.socketId).emit('change_request_status', {
+      requestId: request.id,
+      status,
+      action: request.action,
+      currentTime: request.currentTime,
+      videoId: request.videoId
+    });
+  };
+
+  // A user who can now control playback no longer needs their pending request.
+  const cancelRequestsBy = (room, userId) => {
+    room.removeChangeRequestsBy(userId).forEach((request) => {
+      sendRequestStatus(room, request, RequestStatus.CANCELLED);
+    });
+  };
+
   // Middleware to authenticate socket connections
   io.use(async (socket, next) => {
     try {
@@ -37,9 +145,6 @@ const registerSocketHandlers = (io) => {
     // Event: Join Room
     socket.on('join_room', async ({ roomId }) => {
       try {
-        socket.join(roomId);
-        socket.roomId = roomId;
-
         let room = roomManager.getRoom(roomId);
         
         // If room is not initialized in-memory, fetch from MySQL
@@ -53,6 +158,15 @@ const registerSocketHandlers = (io) => {
           room.playbackState.currentTime = dbRoom.currentPlaybackTime;
           room.playbackState.isPlaying = dbRoom.isPlaying;
         }
+
+        const wasRemoved = await RemovedParticipant.findOne({ where: { roomId, userId: user.id } });
+        if (wasRemoved) {
+          socket.emit('kicked', { message: REMOVED_MESSAGE });
+          return;
+        }
+
+        socket.join(roomId);
+        socket.roomId = roomId;
 
         // Determine or assign participant role
         let role = Role.PARTICIPANT;
@@ -91,7 +205,7 @@ const registerSocketHandlers = (io) => {
         socket.emit('user_joined', {
           userId: user.id,
           role,
-          playbackState: room.playbackState,
+          playbackState: room.getLiveState(),
           participants: Array.from(room.participants.values())
         });
 
@@ -99,6 +213,8 @@ const registerSocketHandlers = (io) => {
         io.to(roomId).emit('participants_updated', {
           participants: Array.from(room.participants.values())
         });
+
+        syncChangeRequests(room);
       } catch (error) {
         logger.error(`"socketHandlers.js","join_room","Error: ${error.message}"`);
         socket.emit('error_event', { message: 'Failed to join room.' });
@@ -114,37 +230,13 @@ const registerSocketHandlers = (io) => {
         const room = roomManager.getRoom(roomId);
         if (!room) return;
 
-        const participant = room.getParticipant(user.id);
-        if (!participant || (participant.role !== Role.HOST && participant.role !== Role.MODERATOR)) {
+        if (!canControlPlayback(room.getParticipant(user.id))) {
           socket.emit('error_event', { message: 'Permission Denied: Only Host or Moderator can change playback.' });
           return;
         }
 
-        room.updatePlayback(videoId, currentTime, isPlaying);
-
-        // Broadcast new state to all other participants
-        socket.to(roomId).emit('sync_state', {
-          isPlaying,
-          currentTime,
-          videoId
-        });
-
-        // Update room details in DB
-        await DBRoom.update(
-          { currentPlaybackTime: currentTime, isPlaying, currentVideoId: videoId },
-          { where: { id: roomId } }
-        );
-
-        // Write to playback audit log
-        await PlaybackLog.create({
-          roomId,
-          userId: user.id,
-          action: isPlaying ? 'PLAY' : 'PAUSE',
-          videoId,
-          actionTimestamp: currentTime
-        });
-
-        logger.info(`"socketHandlers.js","play_state_change","Room ${roomId}: ${isPlaying ? 'PLAY' : 'PAUSE'} at ${currentTime}s by ${user.username}"`);
+        const action = isPlaying ? PlaybackAction.PLAY : PlaybackAction.PAUSE;
+        await applyPlaybackChange(room, user, { action, currentTime, videoId }, socket.to(roomId));
       } catch (error) {
         logger.error(`"socketHandlers.js","play_state_change","Error: ${error.message}"`);
       }
@@ -159,31 +251,12 @@ const registerSocketHandlers = (io) => {
         const room = roomManager.getRoom(roomId);
         if (!room) return;
 
-        const participant = room.getParticipant(user.id);
-        if (!participant || (participant.role !== Role.HOST && participant.role !== Role.MODERATOR)) {
+        if (!canControlPlayback(room.getParticipant(user.id))) {
           socket.emit('error_event', { message: 'Permission Denied: Only Host or Moderator can seek.' });
           return;
         }
 
-        room.playbackState.currentTime = currentTime;
-
-        // Broadcast seek action to other participants
-        socket.to(roomId).emit('sync_state', {
-          isPlaying: room.playbackState.isPlaying,
-          currentTime,
-          videoId
-        });
-
-        // Log seek event
-        await PlaybackLog.create({
-          roomId,
-          userId: user.id,
-          action: 'SEEK',
-          videoId,
-          actionTimestamp: currentTime
-        });
-
-        logger.info(`"socketHandlers.js","seek","Room ${roomId}: SEEK to ${currentTime}s by ${user.username}"`);
+        await applyPlaybackChange(room, user, { action: PlaybackAction.SEEK, currentTime, videoId }, socket.to(roomId));
       } catch (error) {
         logger.error(`"socketHandlers.js","seek","Error: ${error.message}"`);
       }
@@ -198,39 +271,74 @@ const registerSocketHandlers = (io) => {
         const room = roomManager.getRoom(roomId);
         if (!room) return;
 
-        const participant = room.getParticipant(user.id);
-        if (!participant || (participant.role !== Role.HOST && participant.role !== Role.MODERATOR)) {
+        if (!canControlPlayback(room.getParticipant(user.id))) {
           socket.emit('error_event', { message: 'Permission Denied: Only Host or Moderator can change videos.' });
           return;
         }
 
-        room.updatePlayback(videoId, 0, false);
-
-        // Broadcast video change to everyone in the room
-        io.to(roomId).emit('sync_state', {
-          isPlaying: false,
-          currentTime: 0,
-          videoId
-        });
-
-        // Update DB
-        await DBRoom.update(
-          { currentVideoId: videoId, currentPlaybackTime: 0, isPlaying: false },
-          { where: { id: roomId } }
-        );
-
-        // Log Change Video
-        await PlaybackLog.create({
-          roomId,
-          userId: user.id,
-          action: 'CHANGE_VIDEO',
-          videoId,
-          actionTimestamp: 0.0
-        });
-
-        logger.info(`"socketHandlers.js","change_video","Room ${roomId}: Video changed to ${videoId} by ${user.username}"`);
+        await applyPlaybackChange(room, user, { action: PlaybackAction.CHANGE_VIDEO, videoId }, io.to(roomId));
       } catch (error) {
         logger.error(`"socketHandlers.js","change_video","Error: ${error.message}"`);
+      }
+    });
+
+    // Event: Participant asks the Host or a Moderator to approve a playback change
+    socket.on('request_change', (payload) => {
+      try {
+        const room = roomManager.getRoom(socket.roomId);
+        if (!room) return;
+
+        const participant = room.getParticipant(user.id);
+        if (!participant) return;
+
+        if (canControlPlayback(participant)) {
+          socket.emit('error_event', { message: 'You can already control playback directly.' });
+          return;
+        }
+
+        const request = buildChangeRequest(payload || {}, user);
+        if (!request) {
+          socket.emit('error_event', { message: 'That change request is not valid.' });
+          return;
+        }
+
+        room.addChangeRequest(request);
+        sendRequestStatus(room, request, RequestStatus.PENDING);
+        syncChangeRequests(room);
+
+        logger.info(`"socketHandlers.js","request_change","Room ${room.id}: ${user.username} requested ${request.action}"`);
+      } catch (error) {
+        logger.error(`"socketHandlers.js","request_change","Error: ${error.message}"`);
+      }
+    });
+
+    // Event: Host or Moderator approves or declines a pending request
+    socket.on('review_change', async ({ requestId, approved }) => {
+      try {
+        const room = roomManager.getRoom(socket.roomId);
+        if (!room) return;
+
+        if (!canControlPlayback(room.getParticipant(user.id))) {
+          socket.emit('error_event', { message: 'Permission Denied: Only Host or Moderator can review requests.' });
+          return;
+        }
+
+        const request = room.takeChangeRequest(requestId);
+        if (!request) {
+          socket.emit('error_event', { message: 'That request has already been handled.' });
+          return;
+        }
+
+        sendRequestStatus(room, request, approved === true ? RequestStatus.APPROVED : RequestStatus.DECLINED);
+        syncChangeRequests(room);
+
+        if (approved === true) {
+          await applyPlaybackChange(room, user, request, io.to(room.id));
+        }
+
+        logger.info(`"socketHandlers.js","review_change","Room ${room.id}: ${user.username} ${approved === true ? 'approved' : 'declined'} ${request.action} from ${request.requesterName}"`);
+      } catch (error) {
+        logger.error(`"socketHandlers.js","review_change","Error: ${error.message}"`);
       }
     });
 
@@ -273,6 +381,9 @@ const registerSocketHandlers = (io) => {
           role: newRole,
           participants: Array.from(room.participants.values())
         });
+
+        if (canControlPlayback(targetParticipant)) cancelRequestsBy(room, targetUserId);
+        syncChangeRequests(room);
       } catch (error) {
         logger.error(`"socketHandlers.js","assign_role","Error: ${error.message}"`);
       }
@@ -356,6 +467,8 @@ const registerSocketHandlers = (io) => {
           participants: Array.from(room.participants.values())
         });
 
+        cancelRequestsBy(room, normalizedTargetId);
+        syncChangeRequests(room);
       } catch (error) {
         logger.error(`"socketHandlers.js","transfer_host","Error: ${error.message}"`);
       }
@@ -373,20 +486,30 @@ const registerSocketHandlers = (io) => {
           return;
         }
 
+        if (targetUserId === user.id) {
+          socket.emit('error_event', { message: 'You cannot remove yourself. Transfer host or leave the room instead.' });
+          return;
+        }
+
         const targetParticipant = room.getParticipant(targetUserId);
         if (!targetParticipant) return;
 
         room.removeParticipant(targetUserId);
 
-        // Persist status disconnect in DB
+        // Persist the removal so the user can't rejoin, including after a server restart
+        await RemovedParticipant.findOrCreate({ where: { roomId, userId: targetUserId } });
         await DBParticipant.update(
           { status: 'DISCONNECTED' },
           { where: { roomId, userId: targetUserId } }
         );
 
-        // Notify client and disconnect
-        io.to(targetParticipant.socketId).emit('kicked');
-        io.sockets.sockets.get(targetParticipant.socketId)?.leave(roomId);
+        // Notify client and take their socket out of the room so it can't send further events
+        io.to(targetParticipant.socketId).emit('kicked', { message: REMOVED_MESSAGE });
+        const targetSocket = io.sockets.sockets.get(targetParticipant.socketId);
+        if (targetSocket) {
+          targetSocket.leave(roomId);
+          targetSocket.roomId = null;
+        }
 
         logger.info(`"socketHandlers.js","remove_participant","Room ${roomId}: Host kicked User ID ${targetUserId}"`);
 
@@ -395,6 +518,8 @@ const registerSocketHandlers = (io) => {
           userId: targetUserId,
           participants: Array.from(room.participants.values())
         });
+
+        syncChangeRequests(room);
       } catch (error) {
         logger.error(`"socketHandlers.js","remove_participant","Error: ${error.message}"`);
       }
@@ -488,6 +613,8 @@ const registerSocketHandlers = (io) => {
               role: Role.HOST,
               participants: Array.from(room.participants.values())
             });
+
+            cancelRequestsBy(room, currentHostId);
           }
 
           // Update MySQL entry for the disconnected user status
@@ -502,6 +629,8 @@ const registerSocketHandlers = (io) => {
           socket.to(roomId).emit('participants_updated', {
             participants: Array.from(room.participants.values())
           });
+
+          syncChangeRequests(room);
         }
       } catch (error) {
         logger.error(`"socketHandlers.js","disconnecting","Error: ${error.message}"`);
