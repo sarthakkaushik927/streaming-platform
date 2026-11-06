@@ -147,7 +147,7 @@ const registerSocketHandlers = (io) => {
       try {
         let room = roomManager.getRoom(roomId);
         
-        // If room is not initialized in-memory, fetch from MySQL
+        // If room is not initialized in-memory, fetch from PostgreSQL
         if (!room) {
           const dbRoom = await DBRoom.findByPk(roomId);
           if (!dbRoom) {
@@ -546,7 +546,7 @@ const registerSocketHandlers = (io) => {
         const roomId = socket.roomId;
         if (!roomId) return;
 
-        // Save message to MySQL
+        // Save message to PostgreSQL
         const chatRecord = await ChatMessage.create({
           roomId,
           userId: user.id,
@@ -615,7 +615,7 @@ const registerSocketHandlers = (io) => {
             cancelRequestsBy(room, currentHostId);
           }
 
-          // Update MySQL entry for the disconnected user status
+          // Update PostgreSQL entry for the disconnected user status
           await DBParticipant.update(
             { status: 'DISCONNECTED' },
             { where: { roomId, userId: user.id } }
