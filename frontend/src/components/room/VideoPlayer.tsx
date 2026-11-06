@@ -80,10 +80,15 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
   const onPlayerReady: YouTubeProps['onReady'] = (event) => {
     playerRef.current = event.target;
     try {
-      // The room kept playing while this player loaded, so include the time that has passed since.
-      const elapsedSeconds = playerState.state === 'playing' ? (Date.now() - playerState.timestamp) / 1000 : 0;
-      event.target.seekTo(playerState.currentTime + elapsedSeconds, true);
-      if (playerState.state === 'playing') event.target.playVideo();
+      if (playerState.state === 'playing') {
+        // The room kept playing while this player loaded, so include the time that has passed since.
+        const elapsedSeconds = (Date.now() - playerState.timestamp) / 1000;
+        event.target.seekTo(playerState.currentTime + elapsedSeconds, true);
+        event.target.playVideo();
+      } else if (playerState.currentTime > 0) {
+        // seekTo would start playback, so load the paused position without playing.
+        event.target.cueVideoById({ videoId: activeVideoId, startSeconds: playerState.currentTime });
+      }
     } catch {
       // The YouTube player throws if its iframe isn't ready; the next sync event corrects it.
     }
