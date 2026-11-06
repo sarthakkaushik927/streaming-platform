@@ -26,7 +26,7 @@ export const TransferHostModal: React.FC<TransferHostModalProps> = ({ isOpen, on
     <Modal isOpen={isOpen} onClose={onClose} title="Transfer Host Role">
       <div className="space-y-6">
         <p className="font-body-md text-on-surface-variant">
-          Select a participant to transfer your Host role to. You will become a Moderator.
+          Select a participant to transfer your Host role to. You will become a Participant.
         </p>
         
         <div className="space-y-2 max-h-[40vh] overflow-y-auto custom-scrollbar">

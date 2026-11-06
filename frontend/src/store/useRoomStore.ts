@@ -172,6 +172,14 @@ export const useRoomStore = create<RoomState>((set, get) => {
     get().leaveRoom();
   };
 
+  const handleHostTransferred = (payload: any) => {
+    if (!payload?.newHostId || !Array.isArray(payload.participants)) return;
+    set((state) => ({
+      participants: payload.participants.map(normalizeParticipant),
+      room: state.room ? { ...state.room, hostId: String(payload.newHostId) } : null,
+    }));
+  };
+
   const connectAndJoinSocketRoom = (roomId: string) => {
     socketService.connect();
     socketService.emit('join_room', { roomId });
@@ -187,6 +195,7 @@ export const useRoomStore = create<RoomState>((set, get) => {
   socketService.on('chat_message', handleChatMessage);
   socketService.on('reaction', handleReaction);
   socketService.on('kicked', handleKicked);
+  socketService.on('host_transferred', handleHostTransferred);
 
   return {
     room: null,
@@ -295,13 +304,7 @@ set({ room: null, participants: [], messages: [], selfId: null, reactions: [] })
     },
 
     transferHost: (newHostId: string) => {
-      set((state) => ({
-        participants: state.participants.map(p => {
-          if (String(p.userId) === String(newHostId)) return { ...p, role: Role.HOST };
-          if (p.role === Role.HOST) return { ...p, role: Role.MODERATOR };
-          return p;
-        })
-      }));
+      // Roles update when the server confirms with host_transferred
       socketService.emit('transfer_host', { userId: newHostId, targetUserId: newHostId });
     }
   };
