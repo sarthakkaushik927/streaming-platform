@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Modal } from '../shared/Modal';
+import { LoadingSpinner } from '../shared/LoadingSpinner';
 import { roomService } from '../../services/room.service';
 import { RoomLogEntry } from '../../types/room';
+import { formatClock } from '../../utils/changeRequest';
 
 interface PlaybackLogsModalProps {
   isOpen: boolean;
   onClose: () => void;
   roomId: string;
 }
+
+const ACTION_LABELS: Record<string, string> = {
+  PLAY: 'Played',
+  PAUSE: 'Paused',
+  SEEK: 'Jumped',
+  CHANGE_VIDEO: 'Changed video',
+};
 
 // Modal mounts its children only while open, so each open starts a fresh fetch.
 const PlaybackLogsList: React.FC<{ roomId: string }> = ({ roomId }) => {
@@ -19,36 +28,8 @@ const PlaybackLogsList: React.FC<{ roomId: string }> = ({ roomId }) => {
     let isActive = true;
 
     roomService.getRoomPlaybackLogs(roomId)
-      .then(data => {
-        if (!isActive) return;
-        if (Array.isArray(data) && data.length > 0) {
-          setLogs(data);
-        } else {
-          // Default sample sync action logs
-          setLogs([
-            {
-              id: 'log-1',
-              roomId,
-              action: 'PLAY',
-              timestamp: new Date(Date.now() - 60000).toLocaleTimeString(),
-              details: 'Host initialized room playback sync'
-            },
-            {
-              id: 'log-2',
-              roomId,
-              action: 'SEEK',
-              timestamp: new Date(Date.now() - 30000).toLocaleTimeString(),
-              details: 'Seek position set to 00:00:15'
-            },
-            {
-              id: 'log-3',
-              roomId,
-              action: 'SYNC_CHECK',
-              timestamp: new Date().toLocaleTimeString(),
-              details: 'WebSocket sync verified across 12 peers (0ms drift)'
-            }
-          ]);
-        }
+      .then((data) => {
+        if (isActive && Array.isArray(data)) setLogs(data);
       })
       .finally(() => {
         if (isActive) setIsLoading(false);
@@ -59,43 +40,34 @@ const PlaybackLogsList: React.FC<{ roomId: string }> = ({ roomId }) => {
     };
   }, [roomId]);
 
-  return (
-    <div className="max-h-72 overflow-y-auto custom-scrollbar space-y-2">
-      {isLoading ? (
-        <div className="text-center py-8">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <p className="font-label-mono text-xs text-on-surface-variant">Fetching room playback logs...</p>
-        </div>
-      ) : logs.length > 0 ? (
-        logs.map(log => (
-          <div key={log.id} className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/30 font-label-mono text-xs flex justify-between items-start">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-primary">{log.action}</span>
-                <span className="text-[10px] text-on-surface-variant/60">{log.timestamp}</span>
-              </div>
-              {log.details && <p className="text-on-surface-variant text-[11px] mt-1">{log.details}</p>}
-            </div>
-            <span className="text-[10px] bg-surface-container-high px-2 py-0.5 rounded text-green-500 font-bold">VERIFIED</span>
-          </div>
-        ))
-      ) : (
-        <p className="text-center text-xs text-on-surface-variant py-6">No playback action logs recorded yet.</p>
-      )}
-    </div>
-  );
-};
-
-export const PlaybackLogsModal: React.FC<PlaybackLogsModalProps> = ({ isOpen, onClose, roomId }) => {
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Room Playback Action Logs">
-      <div className="space-y-4">
-        <p className="font-label-mono text-xs text-on-surface-variant">
-          Historical synchronization audit trail from <span className="text-primary font-bold">GET /api/v1/rooms/{roomId}/logs</span>
-        </p>
-
-        <PlaybackLogsList roomId={roomId} />
+  if (isLoading) {
+    return (
+      <div className="py-8">
+        <LoadingSpinner />
       </div>
-    </Modal>
+    );
+  }
+
+  if (logs.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted">No playback actions yet.</p>;
+  }
+
+  return (
+    <ul className="thin-scrollbar max-h-72 divide-y divide-line overflow-y-auto">
+      {logs.map((log) => (
+        <li key={log.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+          <span className="min-w-0 truncate">
+            <span className="font-semibold">{log.username}</span> {(ACTION_LABELS[log.action] ?? log.action).toLowerCase()}
+          </span>
+          <span className="shrink-0 font-mono text-xs text-muted">{formatClock(Number(log.timestamp) || 0)}</span>
+        </li>
+      ))}
+    </ul>
   );
 };
+
+export const PlaybackLogsModal: React.FC<PlaybackLogsModalProps> = ({ isOpen, onClose, roomId }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="Playback history">
+    <PlaybackLogsList roomId={roomId} />
+  </Modal>
+);

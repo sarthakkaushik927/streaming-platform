@@ -45,9 +45,8 @@ export const ChangeVideoModal: React.FC<ChangeVideoModalProps> = ({ isOpen, onCl
     <Modal isOpen={isOpen} onClose={onClose} title={canControl ? 'Change YouTube Video' : 'Request a Video Change'}>
       <form onSubmit={handleSubmit} className="space-y-6">
         <Input
-          label="YOUTUBE URL OR VIDEO ID"
-          icon="link"
-          placeholder="e.g. https://www.youtube.com/watch?v=8vnrqEudzWQ or 8vnrqEudzWQ"
+          label="YouTube link or video ID"
+          placeholder="https://www.youtube.com/watch?v=..."
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
@@ -56,9 +55,9 @@ export const ChangeVideoModal: React.FC<ChangeVideoModalProps> = ({ isOpen, onCl
           error={error}
           autoFocus
         />
-        <div className="flex gap-4 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button type="submit" variant="primary" className="flex-1" disabled={!url.trim()}>
+        <div className="flex gap-3">
+          <Button variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button type="submit" className="flex-1" disabled={!url.trim()}>
             {canControl ? 'Update Video' : 'Send Request'}
           </Button>
         </div>

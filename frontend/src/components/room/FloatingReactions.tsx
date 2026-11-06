@@ -32,10 +32,10 @@ export const FloatingReactions: React.FC<FloatingReactionsProps> = ({ reactions,
             style={{ left: `${item.leftPercent}%` }}
             className="absolute bottom-10 -translate-x-1/2 flex flex-col items-center select-none"
           >
-            <span className="text-5xl md:text-6xl filter drop-shadow-[0_0_15px_rgba(255,255,255,0.7)]">
+            <span className="text-5xl md:text-6xl">
               {item.emoji}
             </span>
-            <span className="text-[10px] font-bold text-on-primary bg-primary/90 backdrop-blur-md px-3 py-0.5 rounded-full mt-1.5 border border-white/30 shadow-lg">
+            <span className="rounded-sm bg-marquee px-2 py-0.5 text-xs font-semibold text-marquee-ink">
               {item.username}
             </span>
           </motion.div>

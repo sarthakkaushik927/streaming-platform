@@ -1,8 +1,11 @@
-export const NotFoundPage: React.FC = () => {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <h1 className="font-display-lg text-primary text-6xl mb-4">404</h1>
-      <p className="font-body-lg text-on-surface-variant">Page not found.</p>
-    </div>
-  );
-};
+import React from 'react';
+import { LinkButton } from '../components/shared/LinkButton';
+
+export const NotFoundPage: React.FC = () => (
+  <main className="flex min-h-[calc(100svh-var(--nav-h))] flex-col items-center justify-center gap-5 px-4 text-center">
+    <p aria-hidden="true" className="font-display text-[10rem] leading-none text-accent md:text-[14rem]">404</p>
+    <h1 className="text-5xl">Page not found</h1>
+    <p className="text-base text-muted">That link doesn't go anywhere.</p>
+    <LinkButton to="/">Go to the home page</LinkButton>
+  </main>
+);

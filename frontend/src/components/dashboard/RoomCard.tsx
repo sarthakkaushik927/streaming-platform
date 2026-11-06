@@ -1,52 +1,57 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Trash2, Users } from 'lucide-react';
 import { Room } from '../../types/room';
-import { GlassCard } from '../shared/GlassCard';
-import { Button } from '../shared/Button';
-import { useNavigate } from 'react-router-dom';
+import { IconButton } from '../shared/IconButton';
+import { Ticket } from '../shared/Ticket';
 
 interface RoomCardProps {
   room: Room;
+  actionLabel?: string;
   onDelete?: (roomId: string) => void;
 }
 
-export const RoomCard: React.FC<RoomCardProps> = ({ room, onDelete }) => {
-  const navigate = useNavigate();
+// Each room is a paper ticket: room details on the ticket, the way in on the stub.
+export const RoomCard: React.FC<RoomCardProps> = ({ room, actionLabel = 'Enter Room', onDelete }) => {
+  const count = room.participantCount ?? 0;
+
+  const handleDelete = () => {
+    if (window.confirm(`Delete "${room.name}"? This can't be undone.`)) {
+      onDelete?.(room.id);
+    }
+  };
+
+  const stub = (
+    <div className="flex w-full items-center justify-between gap-2">
+      <Link
+        to={`/room/${room.id}`}
+        className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-ticket-ink px-4 text-sm font-semibold tracking-wide text-ticket transition-colors hover:bg-curtain hover:text-curtain-ink"
+      >
+        {actionLabel}
+        <ArrowRight className="size-4" />
+      </Link>
+      {onDelete && (
+        <IconButton label="Delete Room" onClick={handleDelete} className="text-ticket-muted hover:bg-transparent hover:text-curtain">
+          <Trash2 className="size-4" />
+        </IconButton>
+      )}
+    </div>
+  );
 
   return (
-    <GlassCard className="p-6 hover:border-primary/30 transition-colors flex flex-col justify-between h-full">
-      <div>
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="font-headline-sm text-on-surface text-lg">{room.name}</h3>
-          <div className="flex items-center gap-2">
-            {room.isPrivate && (
-              <span className="material-symbols-outlined text-outline text-[18px]">lock</span>
-            )}
-            {onDelete && (
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (window.confirm('Are you sure you want to delete this room?')) {
-                    onDelete(room.id);
-                  }
-                }}
-                className="text-error/70 hover:text-error transition-colors p-1"
-                title="Delete Room"
-              >
-                <span className="material-symbols-outlined text-[18px]">delete</span>
-              </button>
-            )}
-          </div>
-        </div>
-        <p className="font-label-mono text-sm text-on-surface-variant mb-4">ID: {room.id}</p>
-        <div className="flex items-center gap-2 text-on-surface-variant font-label-mono text-[12px]">
-          <span className="material-symbols-outlined text-[16px]">group</span>
-          {room.participantCount ?? 0} participant(s)
-        </div>
+    <Ticket stub={stub} className="bg-ticket text-ticket-ink">
+      <div className="label-caps flex items-center justify-between gap-2 text-ticket-muted">
+        <span>Admit one</span>
+        <span className="truncate">No. {room.id.slice(0, 6).toUpperCase()}</span>
       </div>
-      <div className="mt-6">
-        <Button variant="outline" fullWidth onClick={() => navigate(`/room/${room.id}`)}>Enter Room</Button>
-      </div>
-    </GlassCard>
+      <h2 className="mt-5 text-4xl wrap-break-word">{room.name}</h2>
+      <p className="mt-4 flex items-center gap-1.5 text-sm text-ticket-muted">
+        <Users className="size-4" />
+        {count} {count === 1 ? 'participant' : 'participants'}
+      </p>
+      <p className="mt-1 truncate font-mono text-xs text-ticket-muted" title={room.id}>
+        {room.id}
+      </p>
+    </Ticket>
   );
 };

@@ -27,17 +27,10 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose })
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Join Watch Party Room">
       <form onSubmit={handleJoin} className="space-y-6">
-        <Input
-          label="ROOM CODE OR FULL LINK"
-          icon="link"
-          placeholder="e.g. ROOM-624 or http://localhost:5173/room/ROOM-624"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          autoFocus
-        />
-        <div className="flex gap-4 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button type="submit" variant="primary" className="flex-1" disabled={!input.trim()}>
+        <Input label="Room code or link" placeholder="Paste the room code or link" value={input} onChange={(e) => setInput(e.target.value)} autoFocus />
+        <div className="flex gap-3">
+          <Button variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button type="submit" className="flex-1" disabled={!input.trim()}>
             Join Party
           </Button>
         </div>

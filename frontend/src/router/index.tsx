@@ -12,6 +12,12 @@ import { HireMePage } from '../pages/HireMePage';
 import { ExplorePage } from '../pages/ExplorePage';
 import { AccountPage } from '../pages/AccountPage';
 import { ChatBot } from '../components/shared/ChatBot';
+import { AnimatePresence } from 'framer-motion';
+import { PageTransition } from '../components/shared/Motion';
+import { Navbar } from '../components/shared/Navbar';
+
+// Sign-in screens are a standalone box office with no navbar.
+const PAGES_WITHOUT_NAVBAR = ['/login', '/register'];
 
 const GlobalChatBot: React.FC = () => {
   const location = useLocation();
@@ -21,9 +27,24 @@ const GlobalChatBot: React.FC = () => {
 };
 
 export const AppRouter: React.FC = () => {
+  const location = useLocation();
+
+  // Keyed by path so the old page can animate out before the new one comes in.
+  // Routes gets the location explicitly so the leaving page keeps rendering its own route meanwhile.
+  const showNavbar = !PAGES_WITHOUT_NAVBAR.includes(location.pathname);
+
   return (
     <>
-      <Routes>
+      {showNavbar && (
+        <>
+          <Navbar />
+          {/* The navbar is fixed, so this keeps its space in the page. */}
+          <div aria-hidden="true" className="h-(--nav-h)" />
+        </>
+      )}
+      <AnimatePresence mode="wait" initial={false}>
+      <PageTransition key={location.pathname}>
+      <Routes location={location}>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/explore" element={<ExplorePage />} />
@@ -44,6 +65,8 @@ export const AppRouter: React.FC = () => {
         {/* Catch-all 404 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </PageTransition>
+      </AnimatePresence>
       <GlobalChatBot />
     </>
   );

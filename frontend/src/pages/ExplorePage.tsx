@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Navbar } from '../components/shared/Navbar';
-import { GlassCard } from '../components/shared/GlassCard';
-import { Button } from '../components/shared/Button';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Compass, Search } from 'lucide-react';
+import { PageLayout } from '../components/shared/PageLayout';
+import { PageHeader } from '../components/shared/PageHeader';
+import { EmptyState } from '../components/shared/EmptyState';
+import { Input } from '../components/shared/Input';
+import { RoomCard } from '../components/dashboard/RoomCard';
+import { RoomGrid } from '../components/dashboard/RoomGrid';
 import { roomService } from '../services/room.service';
 import { Room } from '../types/room';
 
@@ -25,99 +28,31 @@ export const ExplorePage: React.FC = () => {
     fetchRooms();
   }, []);
 
-  const filteredRooms = rooms.filter(room =>
+  const filteredRooms = rooms.filter((room) =>
     room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     room.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     room.hostId.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-frame p-2 md:p-4 flex flex-col font-body-md">
-      <div className="flex-1 bg-background text-on-surface rounded-4xl overflow-hidden flex flex-col shadow-2xl relative">
-      <Navbar />
+    <PageLayout>
+      <PageHeader title="Explore watch parties" description="Find a room and watch along with everyone in it." />
 
-      <main className="flex-1 max-w-full px-6 lg:px-16 2xl:px-24 py-12 w-full">
-        {/* Header */}
-        <div className="mb-10 text-center md:text-left">
-          <span className="font-label-caps text-[11px] text-primary uppercase tracking-[0.15em]">Public Lobbies</span>
-          <h1 className="font-display-lg text-4xl text-on-surface mt-1 tracking-tight">Explore Live Watch Parties</h1>
-          <p className="font-body-md text-on-surface-variant max-w-xl">
-            Join public synchronized lobbies created by creators, friends, and media enthusiasts around the world.
-          </p>
+      <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div className="w-full max-w-sm">
+          <Input aria-label="Search rooms" icon={<Search />} placeholder="Search rooms..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
-
-        {/* Search */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
-          <div className="relative w-full md:w-72">
-            <input
-              type="text"
-              placeholder="Search rooms or hosts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-surface-container-low border border-outline rounded-full pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary font-label-mono"
-            />
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-              search
-            </span>
-          </div>
-          <span className="font-label-mono text-xs text-on-surface-variant">
-            {filteredRooms.length} room{filteredRooms.length !== 1 ? 's' : ''} available
-          </span>
-        </div>
-
-        {/* Rooms Grid */}
-        {isLoading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-2 rounded-full border-primary border-t-transparent animate-spin" />
-          </div>
-        ) : filteredRooms.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-            {filteredRooms.map(room => (
-              <GlassCard key={room.id} className="p-6 flex flex-col justify-between hover:border-primary/30 transition-colors">
-                <div>
-                  <div className="mb-4">
-                    <span className="text-3xl">🎬</span>
-                  </div>
-
-                  <h3 className="font-headline-sm text-lg text-on-surface mb-2 leading-snug">{room.name}</h3>
-                  <p className="font-label-mono text-xs text-on-surface-variant mb-1">
-                    Host: <span className="text-primary">@{room.hostId}</span>
-                  </p>
-                  <p className="font-label-mono text-xs text-on-surface-variant mb-4">
-                    ID: <span className="text-on-surface">{room.id}</span>
-                  </p>
-
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {room.participantCount !== undefined && (
-                      <span className="font-label-caps text-[10px] px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant border border-outline">
-                        👥 {room.participantCount} watching
-                      </span>
-                    )}
-                    {room.initialVideoId && room.initialVideoId !== 'dQw4w9WgXcQ' && (
-                      <span className="font-label-caps text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                        🎥 Has Video
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <Link to={`/room/${room.id}`}>
-                  <Button variant="primary" fullWidth icon={<span className="material-symbols-outlined text-[18px]">play_arrow</span>}>
-                    Join Party
-                  </Button>
-                </Link>
-              </GlassCard>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-20 bg-surface-container-low rounded-[20px] border border-outline border-dashed">
-            <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-4">travel_explore</span>
-            <p className="font-body-md text-on-surface-variant">No public rooms found.</p>
-          </div>
-        )}
-      </main>
-
+        <span className="label-caps text-muted">
+          {filteredRooms.length} room{filteredRooms.length !== 1 ? 's' : ''}
+        </span>
       </div>
-    </div>
+
+      <RoomGrid
+        isLoading={isLoading}
+        rooms={filteredRooms}
+        renderRoom={(room) => <RoomCard key={room.id} room={room} actionLabel="Join Party" />}
+        empty={<EmptyState icon={<Compass />} message="No rooms found." />}
+      />
+    </PageLayout>
   );
 };

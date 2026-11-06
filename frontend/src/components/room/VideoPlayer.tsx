@@ -4,12 +4,15 @@ import { usePlayer } from '../../hooks/usePlayer';
 import { useRoom } from '../../hooks/useRoom';
 import { Role } from '../../types/participant';
 import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
+import { IconButton } from '../shared/IconButton';
+import { Input } from '../shared/Input';
 import { extractYouTubeVideoId } from '../../utils/youtube';
 import { describeChange } from '../../utils/changeRequest';
 import env from '../../config/env';
 import {
   Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX,
-  Search, Loader2, Clapperboard, Smile, Video, Maximize
+  Search, Loader2, Smile, Video, Maximize
 } from 'lucide-react';
 
 interface VideoRecommendation {
@@ -251,154 +254,119 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
   const isPlaying = playerState.state === 'playing';
 
   return (
-    <div className="w-full flex flex-col lg:flex-row gap-4 items-stretch">
+    <div className="flex flex-col gap-4">
+      <div ref={videoContainerRef} className="overflow-hidden rounded-sm border border-line bg-card">
+        {/* The screen sits on a red curtain stage with marquee bulbs above and below. */}
+        <div className="curtain p-2 sm:p-3">
+          <div aria-hidden="true" className="marquee-bulbs mb-2" />
+          <div className="relative aspect-video w-full bg-screen">
+            {/* Stops participants clicking the YouTube timeline directly */}
+            {!canControl && (
+              <div className="absolute inset-0 z-30 cursor-not-allowed" title="Playback is controlled by the host" />
+            )}
 
-      {/* ── LEFT BOX: Video + Controls ── */}
-      <div ref={videoContainerRef} className="flex-1 min-w-0 flex flex-col rounded-3xl overflow-hidden bg-room-card-bg shadow-xl dark:p-0.75 border border-outline">
-        <div className="flex-1 min-w-0 flex flex-col dark:bg-black dark:rounded-[21px] overflow-hidden">
-
-        {/* Video player */}
-        <div className="relative w-full aspect-video bg-black flex-1 min-h-75">
-
-          {/* Participant overlay — blocks timeline scrubbing */}
-          {!canControl && (
-            <div className="absolute inset-0 z-30 bg-transparent cursor-not-allowed" title="Playback is controlled by the host" />
-          )}
-
-          <YouTube
-            key={activeVideoId}
-            videoId={activeVideoId}
-            opts={PLAYER_OPTIONS}
-            onReady={onPlayerReady}
-            onStateChange={onStateChange}
-            className="w-full h-full"
-            iframeClassName="w-full h-full"
-          />
+            <YouTube
+              key={activeVideoId}
+              videoId={activeVideoId}
+              opts={PLAYER_OPTIONS}
+              onReady={onPlayerReady}
+              onStateChange={onStateChange}
+              className="h-full w-full"
+              iframeClassName="w-full h-full"
+            />
+          </div>
+          <div aria-hidden="true" className="marquee-bulbs mt-2" />
         </div>
 
-        {/* Divider */}
-        <div className="h-px bg-white/10" />
-
-        {/* Controls bar */}
-        <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-surface-container dark:bg-black border-t border-outline dark:border-white/10">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line p-3">
+          <div className="flex flex-wrap items-center gap-2">
             {isPlaying ? (
-              <Button variant="primary" onClick={handleManualPause} icon={<Pause className="w-4 h-4" />}>{canControl ? 'Pause' : 'Request Pause'}</Button>
+              <Button onClick={handleManualPause} icon={<Pause className="size-4" />}>{canControl ? 'Pause' : 'Request Pause'}</Button>
             ) : (
-              <Button variant="primary" onClick={handleManualPlay} icon={<Play className="w-4 h-4" />}>{canControl ? 'Play' : 'Request Play'}</Button>
+              <Button onClick={handleManualPlay} icon={<Play className="size-4" />}>{canControl ? 'Play' : 'Request Play'}</Button>
             )}
-            <button onClick={() => handleSeekOffset(-10)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white transition-all font-label-mono text-xs font-semibold shadow-xs" title={canControl ? 'Rewind 10s' : 'Request to rewind 10s'}>
-              <RotateCcw className="w-3.5 h-3.5 text-primary" /> -10s
-            </button>
-            <button onClick={() => handleSeekOffset(10)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white transition-all font-label-mono text-xs font-semibold shadow-xs" title={canControl ? 'Forward 10s' : 'Request to forward 10s'}>
-              <RotateCw className="w-3.5 h-3.5 text-primary" /> +10s
-            </button>
-            <button onClick={toggleMute} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white transition-all font-label-mono text-xs font-semibold shadow-xs" title={isMuted ? 'Unmute' : 'Mute'}>
-              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-error" /> : <Volume2 className="w-3.5 h-3.5 text-primary" />}
+            <Button variant="outline" onClick={() => handleSeekOffset(-10)} title={canControl ? 'Rewind 10s' : 'Request to rewind 10s'} icon={<RotateCcw className="size-4" />}>-10s</Button>
+            <Button variant="outline" onClick={() => handleSeekOffset(10)} title={canControl ? 'Forward 10s' : 'Request to forward 10s'} icon={<RotateCw className="size-4" />}>+10s</Button>
+            <Button variant="outline" onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'} icon={isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}>
               {isMuted ? 'Unmute' : 'Mute'}
-            </button>
+            </Button>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-label-mono text-[10px] text-on-surface-variant dark:text-white/60 bg-surface dark:bg-white/5 px-3 py-1.5 rounded-lg border border-outline dark:border-white/10">
-              ID: <span className="text-primary font-bold">{activeVideoId}</span>
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="hidden font-mono text-xs text-muted sm:inline">{activeVideoId}</span>
             {onChangeVideoClick && (
-              <Button variant="outline" onClick={onChangeVideoClick} icon={<Video className="w-4 h-4" />}>{canControl ? 'Change Video' : 'Request Video Change'}</Button>
+              <Button variant="outline" onClick={onChangeVideoClick} icon={<Video className="size-4" />}>{canControl ? 'Change Video' : 'Request Video Change'}</Button>
             )}
-            <button onClick={handleFullscreen} className="flex items-center justify-center p-2 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-primary hover:text-black dark:hover:bg-primary dark:hover:text-black border border-black/10 dark:border-white/10 text-on-surface dark:text-white transition-all shadow-xs" title="Toggle Fullscreen">
-              <Maximize className="w-4 h-4 text-primary" />
-            </button>
+            <IconButton label="Toggle fullscreen" onClick={handleFullscreen}>
+              <Maximize className="size-4" />
+            </IconButton>
           </div>
         </div>
 
-        {/* Pending request notice */}
         {myPendingRequest && (
-          <div role="status" className="px-4 py-2 bg-surface dark:bg-black border-t border-outline dark:border-white/10 font-body-md text-xs text-on-surface dark:text-white">
+          <div role="status" className="border-t border-l-4 border-line border-l-marquee bg-accent-soft px-4 py-2 text-sm text-ink">
             Waiting for a host or moderator to approve your request to {describeChange(myPendingRequest)}.
           </div>
         )}
 
-        {/* Reactions row */}
         {onSendReaction && (
-          <div className="px-4 py-2.5 flex items-center gap-3 bg-surface dark:bg-black border-t border-outline dark:border-white/10 relative overflow-hidden shrink-0">
-            <div className="flex items-center gap-1.5 text-on-surface-variant relative z-10">
-              <Smile className="w-4 h-4 text-primary" />
-              <span className="font-label-caps text-[10px] font-bold text-primary uppercase tracking-widest">React</span>
-            </div>
-            <div className="h-4 w-px bg-outline relative z-10" />
-            <div className="flex items-center gap-2 relative z-10">
-              {REACTION_EMOJIS.map(emoji => (
-                <button key={emoji} onClick={() => onSendReaction(emoji)}
-                  className="text-xl hover:scale-125 active:scale-95 transition-transform p-1.5 rounded-xl hover:bg-surface-container-high dark:hover:bg-white/10 border border-transparent hover:border-primary/30"
-                  title={`Send ${emoji}`}>{emoji}</button>
-              ))}
-            </div>
+          <div className="flex items-center gap-2 overflow-x-auto border-t border-line px-3 py-2">
+            <span className="label-caps flex items-center gap-1.5 text-muted">
+              <Smile className="size-4" /> React
+            </span>
+            {REACTION_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onSendReaction(emoji)}
+                title={`Send ${emoji}`}
+                aria-label={`Send ${emoji}`}
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-sm text-xl transition-transform hover:-translate-y-0.5 hover:bg-subtle active:translate-y-px"
+              >
+                {emoji}
+              </button>
+            ))}
           </div>
         )}
-        </div>
       </div>
 
-      {/* ── RIGHT BOX: YouTube Search ── */}
-      <div className="w-full lg:w-85 xl:w-90 shrink-0 flex flex-col border border-outline rounded-3xl overflow-hidden bg-room-card-bg text-room-card-text shadow-md dark:p-0.75 h-145">
-        <div className="flex flex-col h-full dark:bg-black dark:rounded-[21px] overflow-hidden">
+      <Card className="p-4">
+        <Input
+          aria-label="Search YouTube"
+          icon={<Search />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search YouTube..."
+        />
 
-        {/* Panel header */}
-        <div className="px-4 py-3 border-b border-black/10 dark:border-white/10 flex items-center gap-2 shrink-0 dark:text-white">
-          <Clapperboard className="w-4 h-4" />
-          <span className="font-label-caps text-xs uppercase tracking-wider font-bold">Video Search</span>
-        </div>
-
-        {/* Search input */}
-        <div className="px-3 py-3 shrink-0 border-b border-black/10 dark:border-white/10">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 dark:opacity-100 dark:text-white/50" />
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search YouTube..."
-              className="w-full bg-black/5 dark:bg-white/10 border-2 border-black/20 dark:border-primary/50 rounded-xl pl-9 pr-4 py-2 text-sm placeholder:opacity-50 dark:placeholder:text-white/40 focus:outline-none focus:border-black dark:focus:border-primary focus:ring-2 focus:ring-black/20 dark:focus:ring-primary/30 transition-all font-body-md text-room-card-text dark:text-white shadow-xs" />
+        {searching && (
+          <div className="flex justify-center py-8">
+            <Loader2 className="size-6 animate-spin text-accent" />
           </div>
-        </div>
+        )}
 
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 min-h-0">
-          {searching && <div className="flex items-center justify-center py-10"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>}
+        {!searching && searchQuery.trim() && searchResults?.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted">No results for "{searchQuery}"</p>
+        )}
 
-          {!searching && !searchQuery.trim() && (
-            <div className="flex flex-col items-center justify-center py-10 text-center gap-2 dark:text-white">
-              <div className="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/10 flex items-center justify-center mb-2">
-                <Search className="w-5 h-5 opacity-50" />
-              </div>
-              <p className="font-body-md text-sm opacity-70 font-medium">Search YouTube for videos</p>
-            </div>
-          )}
-
-          {!searching && searchQuery.trim() && searchResults?.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-10 text-center gap-2 dark:text-white">
-              <Search className="w-6 h-6 opacity-50" />
-              <p className="text-sm opacity-70 font-body-md">No results for "{searchQuery}"</p>
-            </div>
-          )}
-
-          {!searching && searchResults && searchResults.length > 0 && searchResults.map(item => (
-            <div key={item.id} onClick={() => handleVideoSelect(item.videoId)}
-              className="flex gap-3 p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 border border-transparent dark:border-white/5 transition-all cursor-pointer group dark:text-white h-20">
-              <div className="w-24 aspect-video bg-black/10 dark:bg-white/5 rounded-lg overflow-hidden shrink-0 relative">
-                <img src={item.thumbnail} alt="thumbnail" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-8 h-8 rounded-full bg-primary/90 text-black flex items-center justify-center shadow-lg transform scale-50 group-hover:scale-100 transition-all duration-300">
-                    <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col overflow-hidden justify-center py-1 flex-1 min-w-0">
-                <h4 className="font-headline-sm text-sm font-bold line-clamp-2 leading-snug">{item.title}</h4>
-                <p className="font-label-mono text-[10px] opacity-60 mt-1 truncate">{item.channel}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        </div>
-      </div>
+        {!searching && searchResults && searchResults.length > 0 && (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {searchResults.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleVideoSelect(item.videoId)}
+                className="flex gap-3 rounded-sm p-2 text-left transition-colors hover:bg-subtle"
+              >
+                <img src={item.thumbnail} alt="" className="aspect-video w-28 shrink-0 bg-subtle object-cover" />
+                <span className="min-w-0">
+                  <span className="line-clamp-2 text-sm font-semibold text-ink">{item.title}</span>
+                  <span className="mt-1 block truncate text-xs text-muted">{item.channel}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 };

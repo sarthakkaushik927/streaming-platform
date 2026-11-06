@@ -1,33 +1,40 @@
-import React, { InputHTMLAttributes } from 'react';
+import React, { InputHTMLAttributes, ReactNode, useId } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  icon?: string;
+  icon?: ReactNode;
   error?: string;
+  hint?: string;
 }
 
-export const Input: React.FC<InputProps> = ({
-  label,
-  icon,
-  error,
-  className = '',
-  ...props
-}) => {
+export const Input: React.FC<InputProps> = ({ label, icon, error, hint, className = '', id, ...props }) => {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  const noteId = `${inputId}-note`;
+  const note = error ?? hint;
+
   return (
-    <div className="space-y-2 w-full">
+    <div className="w-full space-y-1.5">
       {label && (
-        <label className="font-label-caps text-[12px] text-on-surface-variant flex items-center gap-2 uppercase tracking-widest">
-          {icon && <span className="material-symbols-outlined text-[14px]">{icon}</span>}
+        <label htmlFor={inputId} className="label-caps block text-muted">
           {label}
         </label>
       )}
-      <div className="relative group">
+      <div className="relative">
+        {icon && <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted [&>svg]:size-4">{icon}</span>}
         <input
-          className={`w-full bg-surface-container-low border ${error ? 'border-error' : 'border-outline'} rounded-xl px-4 py-3 font-label-mono text-[14px] text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200 ${className}`}
+          id={inputId}
+          aria-invalid={Boolean(error)}
+          aria-describedby={note ? noteId : undefined}
+          className={`min-h-11 w-full rounded-sm border bg-canvas px-3 text-base text-ink transition-colors placeholder:text-muted/60 focus:border-accent focus:outline-none disabled:opacity-60 sm:text-sm ${icon ? 'pl-9' : ''} ${error ? 'border-danger' : 'border-line'} ${className}`}
           {...props}
         />
       </div>
-      {error && <p className="text-error text-[12px] font-label-mono mt-1">{error}</p>}
+      {note && (
+        <p id={noteId} className={`text-sm ${error ? 'text-danger' : 'text-muted'}`}>
+          {note}
+        </p>
+      )}
     </div>
   );
 };

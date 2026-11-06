@@ -25,44 +25,33 @@ export const TransferHostModal: React.FC<TransferHostModalProps> = ({ isOpen, on
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Transfer Host Role">
       <div className="space-y-6">
-        <p className="font-body-md text-on-surface-variant">
-          Select a participant to transfer your Host role to. You will become a Participant.
-        </p>
-        
-        <div className="space-y-2 max-h-[40vh] overflow-y-auto custom-scrollbar">
-          {eligibleParticipants.map(participant => (
-            <label 
-              key={participant.userId} 
-              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                selectedUserId === participant.userId 
-                  ? 'border-primary bg-primary/10' 
-                  : 'border-outline-variant/30 hover:bg-surface-container-high'
+        <p className="text-sm text-muted">Choose who becomes the host. You will become a participant.</p>
+
+        <div className="thin-scrollbar max-h-[40vh] space-y-2 overflow-y-auto">
+          {eligibleParticipants.map((participant) => (
+            <label
+              key={participant.userId}
+              className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border px-3 py-2 transition-colors ${
+                selectedUserId === participant.userId ? 'border-accent bg-accent-soft' : 'border-line hover:bg-subtle'
               }`}
             >
-              <input 
-                type="radio" 
-                name="newHost" 
+              <input
+                type="radio"
+                name="newHost"
                 value={participant.userId}
                 checked={selectedUserId === participant.userId}
                 onChange={() => setSelectedUserId(participant.userId)}
-                className="text-primary focus:ring-primary bg-surface-container"
+                className="accent-(--accent)"
               />
-              <span className="font-body-md text-on-surface">{participant.username}</span>
+              <span className="text-sm text-ink">{participant.username}</span>
             </label>
           ))}
-          {eligibleParticipants.length === 0 && (
-             <p className="text-sm text-outline italic">No eligible participants in the room.</p>
-          )}
+          {eligibleParticipants.length === 0 && <p className="text-sm text-muted">Nobody else is in the room yet.</p>}
         </div>
 
-        <div className="flex gap-4 pt-4">
+        <div className="flex gap-3">
           <Button variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button 
-            variant="danger" 
-            onClick={handleTransfer} 
-            disabled={!selectedUserId} 
-            className="flex-1"
-          >
+          <Button variant="danger" onClick={handleTransfer} disabled={!selectedUserId} className="flex-1">
             Transfer Host
           </Button>
         </div>

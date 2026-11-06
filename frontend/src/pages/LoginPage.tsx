@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GlassCard } from '../components/shared/GlassCard';
+import { Lock, Mail } from 'lucide-react';
+import { AuthLayout } from '../components/shared/AuthLayout';
 import { Input } from '../components/shared/Input';
 import { Button } from '../components/shared/Button';
 import { useAuth } from '../hooks/useAuth';
@@ -37,58 +38,25 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-frame p-2 md:p-4 flex flex-col font-body-md">
-      <div className="flex-1 bg-background text-on-surface rounded-4xl overflow-hidden relative flex flex-col justify-center items-center shadow-2xl">
-      <div className="fixed inset-0 dot-grid opacity-30 pointer-events-none" />
-      
-      <main className="relative z-10 w-full max-w-120 px-6">
-        <div className="text-center mb-10">
-          <Link to="/" className="inline-flex items-center gap-2.5 mb-3">
-            <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-lg">S</span>
-            <span className="font-display-lg text-[28px] text-on-surface tracking-tight">SyncStream</span>
+    <AuthLayout
+      title="Welcome back"
+      description="Sign in to create rooms and join watch parties"
+      footer={
+        <>
+          Don't have an account?{' '}
+          <Link to="/register" state={location.state} className="font-medium text-accent hover:underline">
+            Sign up
           </Link>
-          <p className="font-label-mono text-[11px] text-on-surface-variant uppercase tracking-widest">Real-time Cinematic Synchronization</p>
-        </div>
-
-        <GlassCard className="p-8 md:p-10">
-          <div className="mb-8">
-            <h2 className="font-headline-sm text-xl text-on-surface mb-1 font-semibold">Welcome back</h2>
-            <p className="font-body-md text-on-surface-variant text-sm">Enter your credentials to access your room</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <Input 
-              label="EMAIL ADDRESS"
-              icon="alternate_email"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            
-            <Input 
-              label="PASSWORD"
-              icon="lock"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-
-            <Button type="submit" fullWidth disabled={isLoading} icon={<span className="material-symbols-outlined">arrow_forward</span>}>
-              {isLoading ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </form>
-          
-          <div className="mt-8 text-center">
-             <p className="font-body-md text-on-surface-variant text-sm">
-                 Don't have an account? 
-                 <Link to="/register" state={location.state} className="text-primary font-bold hover:underline transition-colors ml-1">Sign up</Link>
-             </p>
-          </div>
-        </GlassCard>
-      </main>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={handleLogin} className="space-y-4">
+        <Input label="Email address" icon={<Mail />} type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Input label="Password" icon={<Lock />} type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Button type="submit" fullWidth disabled={isLoading}>
+          {isLoading ? 'Signing in...' : 'Sign in'}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 };

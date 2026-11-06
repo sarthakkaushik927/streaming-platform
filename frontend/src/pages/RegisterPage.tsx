@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GlassCard } from '../components/shared/GlassCard';
+import { KeyRound, Lock, Mail, User } from 'lucide-react';
+import { AuthLayout } from '../components/shared/AuthLayout';
 import { Input } from '../components/shared/Input';
 import { Button } from '../components/shared/Button';
 import { useAuth } from '../hooks/useAuth';
@@ -109,125 +110,103 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-frame p-2 md:p-4 flex flex-col font-body-md">
-      <div className="flex-1 bg-background text-on-surface rounded-4xl overflow-hidden relative flex flex-col justify-center items-center shadow-2xl">
-      <div className="fixed inset-0 dot-grid opacity-30 pointer-events-none" />
-      
-      <main className="relative z-10 w-full max-w-120 px-6">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2.5 mb-3">
-            <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-lg">S</span>
-            <span className="font-display-lg text-[28px] text-on-surface tracking-tight">SyncStream</span>
+    <AuthLayout
+      title="Create your account"
+      description={otpSent ? 'Enter the verification code sent to your email' : 'Sign up to host your own watch parties'}
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link to="/login" state={location.state} className="font-medium text-accent hover:underline">
+            Sign in
           </Link>
-          <p className="font-label-mono text-[11px] text-on-surface-variant uppercase tracking-widest">Join the Platform</p>
+        </>
+      }
+    >
+      <form onSubmit={handleRegister} className="space-y-4">
+        <Input
+          label="Username"
+          icon={<User />}
+          type="text"
+          placeholder="johndoe"
+          value={username}
+          error={fieldErrors.username}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setFieldErrors((prev) => ({ ...prev, username: undefined }));
+          }}
+        />
+
+        <div className="space-y-1.5">
+          <Input
+            label="Email address"
+            icon={<Mail />}
+            type="email"
+            placeholder="name@example.com"
+            value={email}
+            disabled={otpSent}
+            error={fieldErrors.email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setFieldErrors((prev) => ({ ...prev, email: undefined }));
+            }}
+          />
+          {otpSent && (
+            <button type="button" onClick={handleChangeEmail} className="text-sm font-medium text-accent hover:underline">
+              Change email
+            </button>
+          )}
         </div>
 
-        <GlassCard className="p-8 md:p-10">
-          <div className="mb-8">
-            <h2 className="font-headline-sm text-xl text-on-surface mb-1 font-semibold">Create Account</h2>
-            <p className="font-body-md text-on-surface-variant text-sm">
-              {otpSent ? 'Enter the verification code sent to your email' : 'Sign up to host your own watch parties'}
-            </p>
-          </div>
+        <Input
+          label="Password"
+          icon={<Lock />}
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          error={fieldErrors.password}
+          hint="At least 8 characters"
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setFieldErrors((prev) => ({ ...prev, password: undefined }));
+          }}
+        />
 
-          <form onSubmit={handleRegister} className="space-y-4">
-            <Input 
-              label="USERNAME"
-              icon="person"
+        {otpSent && (
+          <div className="space-y-1.5">
+            <Input
+              label="Verification code (OTP)"
+              icon={<KeyRound />}
               type="text"
-              placeholder="johndoe"
-              value={username}
-              error={fieldErrors.username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                setFieldErrors((prev) => ({ ...prev, username: undefined }));
-              }}
+              inputMode="numeric"
+              placeholder="123456"
+              maxLength={6}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.trim())}
             />
-            
-            <Input 
-              label="EMAIL ADDRESS"
-              icon="alternate_email"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              disabled={otpSent}
-              error={fieldErrors.email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setFieldErrors((prev) => ({ ...prev, email: undefined }));
-              }}
-            />
-            {otpSent && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted">Didn't receive a code?</span>
               <button
                 type="button"
-                onClick={handleChangeEmail}
-                className="font-label-mono text-xs text-primary font-bold hover:underline"
+                onClick={() => handleSendOtp()}
+                disabled={countdown > 0 || isSendingOtp}
+                className="font-medium text-accent hover:underline disabled:opacity-50"
               >
-                Change email
+                {countdown > 0 ? `Resend in ${countdown}s` : isSendingOtp ? 'Sending...' : 'Resend Code'}
               </button>
-            )}
-
-            <Input 
-              label="PASSWORD"
-              icon="lock"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              error={fieldErrors.password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setFieldErrors((prev) => ({ ...prev, password: undefined }));
-              }}
-            />
-            {!fieldErrors.password && (
-              <p className="font-label-mono text-xs text-on-surface-variant">At least 8 characters</p>
-            )}
-
-            {otpSent && (
-              <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2">
-                <Input 
-                  label="VERIFICATION CODE (OTP)"
-                  icon="key"
-                  type="text"
-                  placeholder="123456"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.trim())}
-                />
-                <div className="flex justify-between items-center px-1">
-                  <span className="font-label-mono text-xs text-on-surface-variant">Didn't receive code?</span>
-                  <button
-                    type="button"
-                    onClick={() => handleSendOtp()}
-                    disabled={countdown > 0 || isSendingOtp}
-                    className="font-label-mono text-xs text-primary font-bold hover:underline disabled:opacity-50"
-                  >
-                    {countdown > 0 ? `Resend in ${countdown}s` : isSendingOtp ? 'Sending...' : 'Resend Code'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!otpSent ? (
-              <Button type="button" onClick={() => handleSendOtp()} fullWidth disabled={isSendingOtp} className="mt-4">
-                {isSendingOtp ? 'Sending verification code...' : 'Send Verification Code'}
-              </Button>
-            ) : (
-              <Button type="submit" fullWidth disabled={isLoading || otp.length !== 6} className="mt-4">
-                {isLoading ? 'Creating account...' : 'Complete Sign up'}
-              </Button>
-            )}
-          </form>
-          
-          <div className="mt-8 text-center">
-             <p className="font-body-md text-on-surface-variant text-sm">
-                 Already have an account? 
-                 <Link to="/login" state={location.state} className="text-primary font-bold hover:underline transition-colors ml-1">Sign in</Link>
-             </p>
+            </div>
           </div>
-        </GlassCard>
-      </main>
-      </div>
-    </div>
+        )}
+
+        {!otpSent ? (
+          <Button onClick={() => handleSendOtp()} fullWidth disabled={isSendingOtp}>
+            {isSendingOtp ? 'Sending verification code...' : 'Send Verification Code'}
+          </Button>
+        ) : (
+          <Button type="submit" fullWidth disabled={isLoading || otp.length !== 6}>
+            {isLoading ? 'Creating account...' : 'Complete Sign up'}
+          </Button>
+        )}
+      </form>
+    </AuthLayout>
   );
 };

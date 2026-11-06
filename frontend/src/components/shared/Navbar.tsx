@@ -1,318 +1,195 @@
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion';
+import { LogOut, Menu, Plus, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useThemeStore } from '../../store/useThemeStore';
-import { Sun, Moon, Menu, LogOut, LogIn, UserPlus, X } from 'lucide-react';
+import { CreateRoomModal } from '../dashboard/CreateRoomModal';
+import { Button } from './Button';
+import { IconButton } from './IconButton';
+import { LinkButton } from './LinkButton';
+import { Logo } from './Logo';
+import { ThemeToggle } from './ThemeToggle';
+import { EASE_OUT } from './motionPresets';
 
-interface NavbarProps {
-  variant?: 'default' | 'onDark' | 'compact';
-}
+const NAV_LINKS = [
+  { name: 'Dashboard', path: '/dashboard' },
+  { name: 'Explore', path: '/explore' },
+  { name: 'Hire me', path: '/hire-me' },
+];
 
-export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
+const SHRINK_AFTER_PX = 24;
+
+// Desktop link. The active one carries a yellow bar that slides over when you change page.
+const DesktopLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to, children }) => (
+  <NavLink
+    to={to}
+    className={({ isActive }) =>
+      `label-caps relative inline-flex min-h-11 items-center px-3 transition-colors ${isActive ? 'text-accent' : 'text-muted hover:text-ink'}`
+    }
+  >
+    {({ isActive }) => (
+      <>
+        {children}
+        {isActive && (
+          <motion.span
+            layoutId="nav-active-bar"
+            transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+            className="absolute inset-x-3 bottom-1.5 h-0.5 bg-accent"
+          />
+        )}
+      </>
+    )}
+  </NavLink>
+);
+
+const menuList = { hidden: {}, shown: { transition: { staggerChildren: 0.06, delayChildren: 0.12 } } };
+const menuItem = { hidden: { opacity: 0, y: 30 }, shown: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE_OUT } } };
+
+// Phones get a red curtain that drops over the screen with big poster-style links.
+const MobileMenu: React.FC<{ isOpen: boolean; onClose: () => void; account: React.ReactNode }> = ({ isOpen, onClose, account }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnEscape = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isOpen, onClose]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+          initial={{ clipPath: 'inset(0 0 100% 0)' }}
+          animate={{ clipPath: 'inset(0 0 0% 0)' }}
+          exit={{ clipPath: 'inset(0 0 100% 0)' }}
+          transition={{ duration: 0.45, ease: EASE_OUT }}
+          className="curtain fixed inset-0 z-60 flex flex-col text-curtain-ink md:hidden"
+        >
+          <div aria-hidden="true" className="marquee-bulbs" />
+          <div className="page-x flex h-16 items-center justify-between">
+            <span className="label-caps">Menu</span>
+            <IconButton label="Close menu" onClick={onClose} className="text-curtain-ink hover:bg-black/20 hover:text-curtain-ink">
+              <X className="size-6" />
+            </IconButton>
+          </div>
+
+          <motion.nav aria-label="Mobile" variants={menuList} initial="hidden" animate="shown" className="page-x flex flex-1 flex-col justify-center gap-2">
+            {NAV_LINKS.map((link) => (
+              <motion.div key={link.path} variants={menuItem}>
+                <NavLink
+                  to={link.path}
+                  onClick={onClose}
+                  className={({ isActive }) => `block py-1 font-display text-6xl leading-none ${isActive ? 'text-marquee' : 'text-curtain-ink'}`}
+                >
+                  {link.name}
+                </NavLink>
+              </motion.div>
+            ))}
+          </motion.nav>
+
+          <div className="page-x flex flex-wrap items-center gap-3 border-t border-curtain-ink/25 py-5">{account}</div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+/*
+  One navbar for the whole app, rendered by the router so it stays put while pages change.
+  It is fixed and the router reserves its full height, so shrinking on scroll never moves the page.
+*/
+export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
-  const theme = useThemeStore(state => state.theme);
-  const toggleTheme = useThemeStore(state => state.toggleTheme);
-  const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
+  const { scrollY } = useScroll();
+
+  useMotionValueEvent(scrollY, 'change', (y) => setIsCompact(y > SHRINK_AFTER_PX));
+
+  const closeMenu = () => setIsMenuOpen(false);
 
   const handleLogout = () => {
+    closeMenu();
     logout();
     navigate('/');
   };
 
-  const navLinks = [
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Explore', path: '/explore' },
-    
-  ];
+  const openCreateRoom = () => {
+    closeMenu();
+    setIsCreateOpen(true);
+  };
 
-  // ── compact variant: for room header row ──
-  if (variant === 'compact') {
-    return (
-      <header className="bg-surface/95 backdrop-blur-md border-2 border-black/20 dark:border-primary/50 shadow-xl h-14 rounded-full flex items-center justify-between px-5 gap-4 relative">
-        <Link to="/" className="font-display-lg text-[18px] text-on-surface tracking-tight hover:opacity-80 transition-opacity flex items-center gap-2">
-          <img src="/favicon.svg" alt="SyncStream" className="w-6 h-6 rounded-md shadow-sm" />
-          <span className="hidden sm:inline font-bold">SyncStream</span>
-        </Link>
-
-        <nav className="flex items-center gap-1">
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.path;
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`px-3 py-1.5 rounded-full font-label-mono text-xs transition-all duration-200 ${
-                  isActive
-                    ? 'bg-surface-container-high text-on-surface font-bold border border-outline/50 shadow-sm'
-                    : 'text-on-surface-variant font-medium hover:text-on-surface hover:bg-surface-container-low'
-                }`}
-              >
-                {link.name}
-              </Link>
-            );
-          })}
-          <Link
-            to="/hire-me"
-            className={`px-3 py-1.5 rounded-full font-label-mono text-xs font-bold transition-all duration-200 ${
-              location.pathname === '/hire-me'
-                ? 'bg-primary text-on-primary shadow-md'
-                : 'bg-primary text-on-primary hover:brightness-110 shadow-sm'
-            }`}
-          >
-            Hire Me
-          </Link>
-        </nav>
-
-        <button 
-          onClick={toggleTheme}
-          className="p-2 hover:bg-surface-container-low rounded-full transition-colors text-on-surface-variant hover:text-on-surface flex items-center justify-center border border-transparent hover:border-outline/50"
-          title="Toggle Theme"
-        >
-          {theme === 'dark' ? <Sun className="w-4 h-4 text-primary" /> : <Moon className="w-4 h-4" />}
-        </button>
-      </header>
-    );
-  }
-
-  // ── onDark variant: pill-nav on black frame for landing hero ──
-  if (variant === 'onDark') {
-    return (
-      <nav className="flex items-center justify-between w-full">
-        {/* Logo */}
-        <Link to="/" className="font-display-lg text-[22px] tracking-tight text-cream-on-frame flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <img src="/favicon.svg" alt="SyncStream" className="w-7 h-7 rounded-lg shadow-sm" />
-          SYNCSTREAM
-        </Link>
-
-        {/* Center pill with nav links */}
-        <div className="hidden md:flex items-center bg-(--cream-on-frame) rounded-full px-1.5 py-1 border-2 border-black/20 dark:border-primary/40 shadow-md">
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.path;
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`px-4 py-1.5 rounded-full font-label-mono text-[11px] transition-all duration-200 ${
-                  isActive
-                    ? 'bg-(--frame) text-(--cream-on-frame) font-bold'
-                    : 'text-(--frame)/70 hover:text-(--frame) font-medium'
-                }`}
-              >
-                {link.name}
-              </Link>
-            );
-          })}
-          <Link
-            to="/hire-me"
-            className="px-4 py-1.5 rounded-full font-label-mono text-[11px] font-bold bg-primary text-on-primary hover:brightness-110 transition-all shadow-sm"
-          >
-            Hire Me
-          </Link>
-        </div>
-
-        {/* Right side: theme toggle + CTA */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-cream-on-frame flex items-center justify-center"
-            title="Toggle Theme"
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          {user ? (
-            <div className="hidden md:flex items-center gap-2">
-              <Link to="/account" className="font-label-mono text-[11px] text-cream-on-frame/70 hover:text-cream-on-frame transition-colors px-3 py-1.5 rounded-full border border-white/10">
-                @{user.username}
-              </Link>
-              <button onClick={handleLogout} className="font-label-mono text-[11px] text-cream-on-frame/50 hover:text-cream-on-frame transition-colors px-3 py-1.5 flex items-center gap-1.5">
-                <LogOut className="w-3.5 h-3.5" /> Logout
-              </button>
-            </div>
-          ) : (
-            <Link to="/register" className="hidden md:inline-flex">
-              <span className="bg-primary text-on-primary font-label-mono text-[11px] font-bold px-5 py-2 rounded-full hover:brightness-105 transition-all">
-                Launch app
-              </span>
-            </Link>
-          )}
-
-          <button 
-            className="md:hidden p-2 text-cream-on-frame hover:bg-white/5 rounded-lg"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-
-        {/* Mobile Menu for onDark */}
-        {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 mt-2 mx-4 bg-(--frame) border border-white/10 rounded-2xl p-4 flex flex-col gap-2 shadow-2xl z-50">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.path}
-                to={link.path} 
-                className={`p-3 rounded-xl font-label-mono text-sm ${
-                  location.pathname === link.path ? 'bg-white/10 text-cream-on-frame font-bold' : 'text-cream-on-frame/60 hover:text-cream-on-frame hover:bg-white/5'
-                }`} 
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {link.name}
-              </Link>
-            ))}
-            <Link
-              to="/hire-me"
-              className="p-3 rounded-xl font-label-mono text-sm font-bold bg-primary text-on-primary text-center hover:brightness-110 transition-all"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Hire Me
-            </Link>
-            {user ? (
-              <button 
-                className="p-3 text-left text-error hover:bg-white/5 rounded-xl font-label-mono text-sm mt-2 flex items-center gap-2" 
-                onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-              >
-                <LogOut className="w-4 h-4" /> Logout
-              </button>
-            ) : (
-              <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
-                <Link to="/login" className="p-3 text-cream-on-frame/60 hover:text-cream-on-frame hover:bg-white/5 rounded-xl font-label-mono text-sm flex items-center gap-2" onClick={() => setIsMenuOpen(false)}>
-                  <LogIn className="w-4 h-4" /> Sign In
-                </Link>
-                <Link to="/register" className="p-3 text-on-primary bg-primary rounded-xl font-bold font-label-mono text-sm flex items-center gap-2" onClick={() => setIsMenuOpen(false)}>
-                  <UserPlus className="w-4 h-4" /> Get Started
-                </Link>
-              </div>
-            )}
-          </div>
+  // onCurtain styles the same actions for the red mobile menu.
+  const renderAccount = (onCurtain: boolean) =>
+    user ? (
+      <>
+        <Button variant={onCurtain ? 'marquee' : 'primary'} onClick={openCreateRoom} icon={<Plus className="size-4" />}>
+          New room
+        </Button>
+        {onCurtain ? (
+          <NavLink to="/account" onClick={closeMenu} className="label-caps inline-flex min-h-11 items-center px-2 text-curtain-ink">
+            @{user.username}
+          </NavLink>
+        ) : (
+          <DesktopLink to="/account">@{user.username}</DesktopLink>
         )}
-      </nav>
+        <IconButton label="Logout" onClick={handleLogout} className={onCurtain ? 'text-curtain-ink hover:bg-black/20 hover:text-curtain-ink' : ''}>
+          <LogOut className="size-4" />
+        </IconButton>
+      </>
+    ) : (
+      <>
+        <LinkButton to="/login" variant={onCurtain ? 'curtain-outline' : 'ghost'} onClick={closeMenu}>
+          Sign in
+        </LinkButton>
+        <LinkButton to="/register" variant={onCurtain ? 'marquee' : 'primary'} onClick={closeMenu}>
+          Get started
+        </LinkButton>
+      </>
     );
-  }
 
-  // ── Default variant: floating capsule top bar for all other pages ──
   return (
-    <div className="sticky top-4 z-50 px-4 w-full flex justify-center pointer-events-none mb-6">
-      <header className="pointer-events-auto bg-surface/95 backdrop-blur-md border-2 border-black/20 dark:border-primary/50 shadow-xl h-14 rounded-full flex items-center justify-between px-4 sm:px-6 w-full max-w-xl lg:max-w-2xl relative">
-        <div className="flex items-center gap-8">
-          <Link to="/" className="font-display-lg text-[20px] text-on-surface tracking-tight hover:opacity-80 transition-opacity flex items-center gap-2">
-          <img src="/favicon.svg" alt="SyncStream" className="w-6 h-6 rounded-md shadow-sm" />
-          <span className="hidden sm:inline">SyncStream</span>
-        </Link>
-
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => {
-              const isActive = location.pathname === link.path;
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`px-3 py-1.5 rounded-full font-label-mono text-xs transition-all duration-200 ${
-                    isActive
-                      ? 'bg-surface-container-high text-on-surface font-bold border border-outline/50 shadow-sm'
-                      : 'text-on-surface-variant font-medium hover:text-on-surface hover:bg-surface-container-low'
-                  }`}
-                >
+    <>
+      <header
+        className={`fixed inset-x-0 top-0 z-40 border-b border-line bg-canvas transition-shadow duration-300 ${
+          isCompact ? 'shadow-[0_10px_30px_rgba(0,0,0,0.35)]' : ''
+        }`}
+      >
+        <motion.div
+          aria-hidden="true"
+          initial={false}
+          animate={{ height: isCompact ? 0 : 10, opacity: isCompact ? 0 : 1 }}
+          transition={{ duration: 0.25 }}
+          className="marquee-bulbs overflow-hidden"
+        />
+        <div className={`page-x flex items-center justify-between gap-4 transition-[height] duration-300 ${isCompact ? 'h-13' : 'h-16'}`}>
+          <div className="flex items-center gap-6">
+            <Logo />
+            <nav aria-label="Main" className="hidden items-center md:flex">
+              {NAV_LINKS.map((link) => (
+                <DesktopLink key={link.path} to={link.path}>
                   {link.name}
-                </Link>
-              );
-            })}
-            <Link
-              to="/hire-me"
-              className={`px-3 py-1.5 rounded-full font-label-mono text-xs font-bold transition-all duration-200 ${
-                location.pathname === '/hire-me'
-                  ? 'bg-primary text-on-primary shadow-md'
-                  : 'bg-primary text-on-primary hover:brightness-110 shadow-sm'
-              }`}
-            >
-              Hire Me
-            </Link>
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button 
-            onClick={toggleTheme}
-            className="p-2 hover:bg-surface-container-low rounded-full transition-colors text-on-surface-variant hover:text-on-surface flex items-center justify-center border border-transparent hover:border-outline/50"
-            title="Toggle Theme"
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-primary" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          <div className="hidden md:flex items-center gap-2">
-            {user ? (
-              <div className="flex items-center gap-2">
-                <Link to="/account" className="font-label-mono text-xs text-on-surface font-semibold bg-surface-container-low hover:bg-surface-container-high transition-colors px-3 py-1.5 rounded-full border border-outline/50 flex items-center gap-1.5 shadow-sm">
-                  @{user.username}
-                </Link>
-                <button onClick={handleLogout} className="p-2 hover:bg-error/10 text-on-surface-variant hover:text-error rounded-full transition-colors flex items-center justify-center" title="Logout">
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link to="/login" className="font-label-mono text-xs font-bold text-on-surface px-4 py-1.5 rounded-full hover:bg-surface-container-low transition-colors">
-                  Sign In
-                </Link>
-                <Link to="/register" className="font-label-mono text-xs font-bold text-on-primary bg-primary px-4 py-1.5 rounded-full shadow-md hover:brightness-105 transition-all">
-                  Get Started
-                </Link>
-              </div>
-            )}
+                </DesktopLink>
+              ))}
+            </nav>
           </div>
 
-          <button 
-            className="md:hidden p-2 text-on-surface hover:bg-surface-container-low rounded-full border border-transparent hover:border-outline/50 transition-colors flex items-center justify-center"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-        
-        {/* Mobile Menu Dropdown anchored to the capsule */}
-        {isMenuOpen && (
-          <div className="md:hidden absolute top-16 left-0 right-0 bg-surface/95 backdrop-blur-xl border border-outline p-2 rounded-3xl flex flex-col gap-1 shadow-2xl origin-top animate-in fade-in slide-in-from-top-2">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.path}
-                to={link.path} 
-                className={`px-4 py-3 rounded-2xl font-label-mono text-sm transition-colors ${
-                  location.pathname === link.path ? 'bg-surface-container-high text-on-surface font-bold shadow-sm border border-outline/30' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
-                }`} 
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {link.name}
-              </Link>
-            ))}
-            <Link
-              to="/hire-me"
-              className="px-4 py-3 rounded-2xl font-label-mono text-sm font-bold bg-primary text-on-primary text-center shadow-md hover:brightness-105 transition-all"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Hire Me
-            </Link>
-            {user ? (
-              <button 
-                className="px-4 py-3 mt-2 text-left text-error hover:bg-error/5 rounded-2xl font-label-mono text-sm flex items-center gap-2 transition-colors border border-transparent hover:border-error/20" 
-                onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-              >
-                <LogOut className="w-4 h-4" /> Logout @{user.username}
-              </button>
-            ) : (
-              <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-outline/30">
-                <Link to="/login" className="px-4 py-3 text-on-surface hover:bg-surface-container-low rounded-2xl font-label-mono text-sm flex items-center gap-2 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                  <LogIn className="w-4 h-4 text-on-surface-variant" /> Sign In
-                </Link>
-                <Link to="/register" className="px-4 py-3 text-on-primary bg-primary shadow-md rounded-2xl font-bold font-label-mono text-sm flex items-center gap-2 hover:brightness-105 transition-all" onClick={() => setIsMenuOpen(false)}>
-                  <UserPlus className="w-4 h-4" /> Get Started
-                </Link>
-              </div>
-            )}
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <div className="hidden items-center gap-2 md:flex">{renderAccount(false)}</div>
+            <IconButton label="Open menu" className="md:hidden" aria-expanded={isMenuOpen} onClick={() => setIsMenuOpen(true)}>
+              <Menu className="size-5" />
+            </IconButton>
           </div>
-        )}
+        </div>
       </header>
-    </div>
+
+      <MobileMenu isOpen={isMenuOpen} onClose={closeMenu} account={renderAccount(true)} />
+      <CreateRoomModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
+    </>
   );
 };

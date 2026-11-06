@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { ToastProvider } from './components/shared/Toast';
 import { AppRouter } from './router';
 import { useThemeStore } from './store/useThemeStore';
@@ -24,12 +25,15 @@ function App() {
     }
   }, [theme]);
 
+  // reducedMotion="user" turns movement off for people who ask their system for less motion.
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        <AppRouter />
-      </ToastProvider>
-    </BrowserRouter>
+    <MotionConfig reducedMotion="user">
+      <BrowserRouter>
+        <ToastProvider>
+          <AppRouter />
+        </ToastProvider>
+      </BrowserRouter>
+    </MotionConfig>
   );
 }
 

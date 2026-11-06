@@ -1,53 +1,28 @@
 import React, { useState } from 'react';
+import { History } from 'lucide-react';
 import { useRoom } from '../../hooks/useRoom';
+import { Button } from '../shared/Button';
 import { PlaybackLogsModal } from './PlaybackLogsModal';
 
 export const SyncTelemetry: React.FC = () => {
-  const { room, playerState, participants } = useRoom();
+  const { room, participants } = useRoom();
   const [isLogsOpen, setIsLogsOpen] = useState(false);
 
   if (!room) return null;
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between py-2.5 px-6 bg-frame border-t border-white/10 font-label-mono text-[10px] text-cream-on-frame/70 uppercase tracking-wider z-20 relative">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[14px] text-primary">cell_tower</span>
-            WS Connected
-          </div>
-          <div className="flex items-center gap-2 border-l border-white/10 pl-4">
-            <span>Room: {room.id}</span>
-          </div>
-          <div className="flex items-center gap-2 border-l border-white/10 pl-4">
-            <span>Peers: {participants.length}</span>
-          </div>
-          {playerState.videoId && (
-            <div className="flex items-center gap-2 border-l border-white/10 pl-4">
-              <span className="material-symbols-outlined text-[14px]">movie</span>
-              {playerState.videoId}
-            </div>
-          )}
-          <div className="flex items-center gap-2 border-l border-white/10 pl-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            Sync OK
-          </div>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-1 text-sm text-muted md:px-8">
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="truncate font-mono text-xs" title={room.id}>{room.id}</span>
+          <span className="label-caps shrink-0">{participants.length} in room</span>
         </div>
-
-        <button 
-          onClick={() => setIsLogsOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 hover:bg-white/[0.07] transition-colors text-cream-on-frame font-bold"
-        >
-          <span className="material-symbols-outlined text-[14px]">history</span>
+        <Button variant="ghost" onClick={() => setIsLogsOpen(true)} icon={<History className="size-4" />}>
           Playback Logs
-        </button>
+        </Button>
       </div>
 
-      <PlaybackLogsModal 
-        isOpen={isLogsOpen} 
-        onClose={() => setIsLogsOpen(false)} 
-        roomId={room.id} 
-      />
+      <PlaybackLogsModal isOpen={isLogsOpen} onClose={() => setIsLogsOpen(false)} roomId={room.id} />
     </>
   );
 };

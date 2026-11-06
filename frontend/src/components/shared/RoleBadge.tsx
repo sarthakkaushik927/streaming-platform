@@ -1,30 +1,20 @@
 import React from 'react';
-import { Role } from '../../types/participant';
 import { Crown, Shield, User } from 'lucide-react';
+import { Role } from '../../types/participant';
 
-interface RoleBadgeProps {
-  role: Role;
-}
+const ROLE_STYLES = {
+  [Role.HOST]: { label: 'Host', Icon: Crown, className: 'bg-marquee text-marquee-ink' },
+  [Role.MODERATOR]: { label: 'Moderator', Icon: Shield, className: 'border border-accent text-accent' },
+  [Role.PARTICIPANT]: { label: 'Participant', Icon: User, className: 'border border-line text-muted' },
+};
 
-export const RoleBadge: React.FC<RoleBadgeProps> = ({ role }) => {
-  switch (role) {
-    case Role.HOST:
-      return (
-        <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-500 font-label-caps text-[10px] font-bold px-2.5 py-1 rounded-full border border-amber-500/30">
-          <Crown className="w-3 h-3" /> HOST
-        </span>
-      );
-    case Role.MODERATOR:
-      return (
-        <span className="inline-flex items-center gap-1 bg-purple-500/10 text-purple-400 font-label-caps text-[10px] font-bold px-2.5 py-1 rounded-full border border-purple-500/30">
-          <Shield className="w-3 h-3" /> MODERATOR
-        </span>
-      );
-    case Role.PARTICIPANT:
-      return (
-        <span className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 font-label-caps text-[10px] font-bold px-2.5 py-1 rounded-full border border-blue-500/30">
-          <User className="w-3 h-3" /> PARTICIPANT
-        </span>
-      );
-  }
+export const RoleBadge: React.FC<{ role: Role }> = ({ role }) => {
+  const { label, Icon, className } = ROLE_STYLES[role] ?? ROLE_STYLES[Role.PARTICIPANT];
+
+  return (
+    <span className={`inline-flex w-fit items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-[0.625rem] tracking-[0.14em] uppercase ${className}`}>
+      <Icon className="size-3" />
+      {label}
+    </span>
+  );
 };

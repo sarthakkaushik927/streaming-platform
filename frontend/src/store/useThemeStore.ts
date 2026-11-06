@@ -9,11 +9,12 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'light', // default to light
+      theme: 'dark', // the poster design is dark-first
       toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
     }),
     {
-      name: 'theme-storage',
+      // New key so everyone starts on the dark poster theme once after the redesign.
+      name: 'syncstream-theme',
     }
   )
 );

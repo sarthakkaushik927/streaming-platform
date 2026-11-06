@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { Role } from '../../types/participant';
+import { Crown, MoreVertical, Shield, User, UserMinus } from 'lucide-react';
+import { Avatar } from '../shared/Avatar';
+import { Card } from '../shared/Card';
+import { IconButton } from '../shared/IconButton';
 import { RoleBadge } from '../shared/RoleBadge';
 
 import { useRoom } from '../../hooks/useRoom';
@@ -39,87 +43,81 @@ export const ParticipantList: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-room-card-bg text-room-card-text rounded-3xl shadow-[0_0_15px_rgba(var(--color-primary),0.15)] overflow-hidden border border-outline dark:p-0.75">
-      <div className="flex flex-col h-full min-h-0 dark:bg-black dark:rounded-[21px] overflow-hidden">
-        <div className="p-4 border-b border-black/10 dark:border-white/10 dark:text-white flex justify-between items-center shrink-0">
-          <h3 className="font-headline-sm text-sm font-bold">Participants</h3>
-          <span className="bg-primary/20 text-primary border border-primary/30 text-xs font-bold px-2.5 py-0.5 rounded-full font-label-mono">
-            {participants.length}
-          </span>
-        </div>
-        
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-2 space-y-2">
-          {sortedParticipants.map(participant => (
-            <div key={participant.userId} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 border-2 border-black/20 dark:border-white/20 transition-all group dark:text-white shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-black dark:bg-primary dark:text-black text-white font-bold text-xs flex items-center justify-center shadow-sm">
-                  {participant.username.charAt(0).toUpperCase()}
+    <Card className="flex h-full min-h-0 flex-col overflow-hidden border-t-4 border-t-curtain">
+      <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3">
+        <h2 className="text-2xl">Participants</h2>
+        <span className="rounded-sm bg-marquee px-2 py-0.5 font-mono text-xs font-bold text-marquee-ink">{participants.length}</span>
+      </div>
+
+      <ul className="thin-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
+        {sortedParticipants.map((participant) => {
+          const isSelf = String(participant.userId) === String(selfId);
+          const isOpen = openMenuId === participant.userId;
+          const canManageThis = canManage && participant.role !== Role.HOST && !isSelf;
+
+          return (
+            <li key={participant.userId} className="rounded-sm p-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar name={participant.username} />
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="truncate text-sm font-semibold">
+                      {participant.username}
+                      {isSelf && <span className="ml-1 font-normal text-muted">(You)</span>}
+                    </span>
+                    <RoleBadge role={participant.role} />
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="font-body-md text-sm flex items-center gap-2 dark:text-primary">
-                    {participant.username}
-                    {String(participant.userId) === String(selfId) && (
-                      <span className="opacity-60 dark:text-white/60 text-[10px]">(You)</span>
-                    )}
-                  </span>
-                  <RoleBadge role={participant.role} />
-                </div>
-              </div>
-              {canManage && participant.role !== Role.HOST && String(participant.userId) !== String(selfId) && (
-                <div className="relative">
-                  <button
+                {canManageThis && (
+                  <IconButton
+                    label={`Manage ${participant.username}`}
+                    aria-expanded={isOpen}
                     onClick={() => {
-                      setOpenMenuId(openMenuId === participant.userId ? null : participant.userId);
+                      setOpenMenuId(isOpen ? null : participant.userId);
                       setConfirmAction(null);
                     }}
-                    aria-label={`Manage ${participant.username}`}
-                    className="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant"
                   >
-                    <span className="material-symbols-outlined text-sm">more_vert</span>
-                  </button>
-                  {openMenuId === participant.userId && (
-                    <div className="absolute right-8 top-0 w-44 bg-surface-container-highest border border-outline-variant/60 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
-                      {participant.role === Role.PARTICIPANT ? (
-                        <button
-                          onClick={() => { assignRole(participant.userId, Role.MODERATOR); setOpenMenuId(null); }}
-                          className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
-                        >
-                          <span className="material-symbols-outlined text-xs text-primary">shield</span>
-                          Make Moderator
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => { assignRole(participant.userId, Role.PARTICIPANT); setOpenMenuId(null); }}
-                          className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
-                        >
-                          <span className="material-symbols-outlined text-xs text-on-surface-variant">group</span>
-                          Demote to Participant
-                        </button>
-                      )}
-                      {isCurrentUserHost && (
-                        <button
-                          onClick={() => handleConfirmedAction('transfer', participant.userId)}
-                          className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
-                        >
-                          <span className="material-symbols-outlined text-xs text-primary">swap_horiz</span>
-                          {confirmAction === 'transfer' ? 'Confirm transfer' : 'Transfer Host'}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleConfirmedAction('remove', participant.userId)}
-                        className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-error"
-                      >
-                        <span className="material-symbols-outlined text-xs">person_remove</span>
-                        {confirmAction === 'remove' ? 'Confirm remove' : 'Remove from room'}
-                      </button>
-                    </div>
+                    <MoreVertical className="size-4" />
+                  </IconButton>
+                )}
+              </div>
+
+              {canManageThis && isOpen && (
+                <div role="group" aria-label={`Actions for ${participant.username}`} className="mt-2 flex flex-col gap-1 border-t border-line pt-2">
+                  {participant.role === Role.PARTICIPANT ? (
+                    <MenuAction icon={<Shield />} onClick={() => { assignRole(participant.userId, Role.MODERATOR); setOpenMenuId(null); }}>
+                      Make Moderator
+                    </MenuAction>
+                  ) : (
+                    <MenuAction icon={<User />} onClick={() => { assignRole(participant.userId, Role.PARTICIPANT); setOpenMenuId(null); }}>
+                      Demote to Participant
+                    </MenuAction>
                   )}
+                  {isCurrentUserHost && (
+                    <MenuAction icon={<Crown />} onClick={() => handleConfirmedAction('transfer', participant.userId)}>
+                      {confirmAction === 'transfer' ? 'Confirm transfer' : 'Transfer Host'}
+                    </MenuAction>
+                  )}
+                  <MenuAction icon={<UserMinus />} danger onClick={() => handleConfirmedAction('remove', participant.userId)}>
+                    {confirmAction === 'remove' ? 'Confirm remove' : 'Remove from room'}
+                  </MenuAction>
                 </div>
               )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 };
+
+const MenuAction: React.FC<{ icon: React.ReactNode; danger?: boolean; onClick: () => void; children: React.ReactNode }> = ({ icon, danger, onClick, children }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`flex min-h-10 w-full items-center gap-2 rounded-sm px-2 text-left text-sm transition-colors hover:bg-subtle [&>svg]:size-4 ${danger ? 'text-danger' : 'text-ink'}`}
+  >
+    {icon}
+    {children}
+  </button>
+);
