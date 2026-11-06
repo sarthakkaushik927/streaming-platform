@@ -2,6 +2,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const app = require('./app.js');
 const sequelize = require('./src/config/sequelize.js');
+const { schema } = require('./src/config/config.js');
 // Ensure all database models are loaded and registered
 require('./src/models/index.js');
 const registerSocketHandlers = require('./src/websockets/socketHandlers.js');
@@ -15,7 +16,8 @@ async function startServer() {
     await sequelize.authenticate();
     logger.info('"server.js","startServer()","SyncStream Database connected successfully"');
     
-    // Synchronize models (alter: true maps models changes to tables)
+    // Create the app's own schema, then any missing tables inside it. Nothing outside it is changed.
+    await sequelize.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
     await sequelize.sync({ alter: false });
     logger.info('"server.js","startServer()","Database models synchronized"');
 

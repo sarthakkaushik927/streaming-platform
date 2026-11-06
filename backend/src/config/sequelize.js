@@ -8,10 +8,13 @@ const options = {
   host: dbConfig.host,
   port: dbConfig.port,
   dialect: dbConfig.dialect,
+  dialectOptions: dbConfig.dialectOptions,
+  define: { schema: config.schema },
   logging: false,
   pool: {
     max: 15,
-    min: 2,
+    // Keep no idle connections, so a serverless database like Neon can suspend when unused.
+    min: 0,
     acquire: 60000,
     idle: 10000
   }

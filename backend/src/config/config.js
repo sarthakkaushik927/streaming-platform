@@ -1,6 +1,8 @@
 require('dotenv').config();
 
 const config = {
+  // All tables live in this schema, so the app can share a database without touching other tables.
+  schema: 'syncstream',
   local: {
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASS || 'postgres',
@@ -11,7 +13,10 @@ const config = {
   },
   production: {
     url: process.env.DATABASE_URL,
-    dialect: 'postgres'
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: { require: true }
+    }
   }
 };
 

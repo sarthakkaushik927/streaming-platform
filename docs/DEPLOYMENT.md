@@ -1,10 +1,10 @@
 # Deployment
 
-The frontend runs on Vercel, and the backend and database run on Render.
+The frontend runs on Vercel, the backend runs on Render, and the database runs on Neon.
 
 ## Database
 
-Create a Render PostgreSQL database in the same region as the backend, and use its **internal** connection URL as `DATABASE_URL`.
+Use a Neon PostgreSQL connection URL as `DATABASE_URL`, ideally in the same region as the backend. SyncStream keeps all its tables in its own `syncstream` schema, which it creates on startup, so it can share a database without changing any other tables.
 
 ## Backend (Render web service)
 
@@ -20,7 +20,7 @@ Create a Render PostgreSQL database in the same region as the backend, and use i
 | --- | --- | --- |
 | `NODE_ENV` | Yes | `production`. This switches the server to `DATABASE_URL` and trusts Render's proxy for visitor IPs |
 | `NODE_VERSION` | Yes | `22` |
-| `DATABASE_URL` | Yes | Internal database URL |
+| `DATABASE_URL` | Yes | Neon connection URL. Production connections always use SSL |
 | `JWT_SECRET` | Yes | A long random string |
 | `CORS_ORIGIN` | Yes | The frontend URL, with no trailing slash |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | For signup | `smtp.gmail.com`, `587` and `false` for Gmail |
@@ -48,7 +48,7 @@ Vite reads these at build time, so redeploy after changing them.
 
 - Render's free web services go to sleep when idle, so the first request after a quiet period can take close to a minute. Open the site once before a demo.
 - Render's free plan may block outgoing email ports. If signup emails fail, check the Render logs. The options are a paid instance or an email API.
-- Check Render's current limits on free databases, as they can expire.
+- Neon suspends the database when idle, which can add a short delay to the first query afterwards.
 
 ## Scaling beyond one server
 

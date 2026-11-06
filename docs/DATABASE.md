@@ -1,6 +1,6 @@
 # Database
 
-SyncStream uses PostgreSQL through Sequelize. `sequelize.sync()` creates any missing tables when the server starts. It doesn't alter existing tables, so changing a column on a live database needs a manual migration.
+SyncStream uses PostgreSQL through Sequelize, hosted on Neon. All tables live in a `syncstream` schema, so they can't clash with other tables in the same database. On startup the server creates that schema and any missing tables inside it. It doesn't alter existing tables, so changing a column on a live database needs a manual migration.
 
 ```mermaid
 erDiagram

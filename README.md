@@ -23,7 +23,7 @@ Watch YouTube videos together in real time. When a host or moderator plays, paus
 | Video | YouTube IFrame API (`react-youtube`) |
 | Backend | Node.js, Express |
 | Realtime | Socket.IO |
-| Database | PostgreSQL with Sequelize |
+| Database | PostgreSQL (Neon) with Sequelize |
 
 ## Run it locally
 
@@ -149,7 +149,7 @@ The room creator is the host. Everyone else joins as a participant. If the host 
 
 ## Deployment
 
-The frontend runs on Vercel, and the backend and PostgreSQL database run on Render. See the [deployment guide](docs/DEPLOYMENT.md) for settings and environment variables.
+The frontend runs on Vercel, the backend runs on Render, and the PostgreSQL database runs on Neon. See the [deployment guide](docs/DEPLOYMENT.md) for settings and environment variables.
 
 ## More docs
 
