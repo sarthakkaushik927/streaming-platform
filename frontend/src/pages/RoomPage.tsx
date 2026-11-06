@@ -11,6 +11,8 @@ import { ChatPanel } from '../components/room/ChatPanel';
 import { SyncTelemetry } from '../components/room/SyncTelemetry';
 import { ChangeVideoModal } from '../components/room/ChangeVideoModal';
 import { RoleManagementModal } from '../components/room/RoleManagementModal';
+import { TransferHostModal } from '../components/room/TransferHostModal';
+import { ChangeRequestsPanel } from '../components/room/ChangeRequestsPanel';
 import { RoleBadge } from '../components/shared/RoleBadge';
 import { useToast } from '../hooks/useToast';
 import { getErrorMessage } from '../utils/error';
@@ -21,12 +23,13 @@ import { MessageSquare, X } from 'lucide-react';
 export const RoomPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { room, joinRoom, leaveRoom, isLoading, participants, selfId } = useRoom();
+  const { room, joinRoom, leaveRoom, isLoading, participants, selfId, notice, clearNotice, wasRemoved } = useRoom();
   const { reactions, sendEmojiReaction, removeReaction } = useRoomStore();
   const { showToast } = useToast();
   
   const [isChangeVideoOpen, setIsChangeVideoOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
   useEffect(() => {
@@ -50,6 +53,16 @@ export const RoomPage: React.FC = () => {
       leaveRoom();
     };
   }, [roomId, joinRoom, leaveRoom, navigate, showToast]);
+
+  useEffect(() => {
+    if (!notice) return;
+    showToast(notice.message, notice.type);
+    clearNotice();
+  }, [notice, showToast, clearNotice]);
+
+  useEffect(() => {
+    if (wasRemoved) navigate('/dashboard', { replace: true });
+  }, [wasRemoved, navigate]);
 
   const currentUserRole = participants.find(p => String(p.userId) === String(selfId))?.role || Role.VIEWER;
 
@@ -95,7 +108,14 @@ export const RoomPage: React.FC = () => {
               <span className="hidden xl:inline">Change Video</span>
             </button>
           )}
-          
+
+          {currentUserRole === Role.HOST && (
+            <button onClick={() => setIsTransferOpen(true)} title="Transfer Host" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-on-surface hover:bg-surface-container transition-colors font-label-mono text-xs font-bold">
+              <span className="material-symbols-outlined text-sm">swap_horiz</span>
+              <span className="hidden xl:inline">Transfer Host</span>
+            </button>
+          )}
+
           <Button variant="danger" onClick={() => navigate('/dashboard')} icon={<span className="material-symbols-outlined text-sm">logout</span>}>
             <span className="hidden xl:inline">Leave</span>
             <span className="xl:hidden">Leave</span>
@@ -125,7 +145,13 @@ export const RoomPage: React.FC = () => {
               <span className="material-symbols-outlined text-sm">movie</span>
             </button>
           )}
-          
+
+          {currentUserRole === Role.HOST && (
+            <button onClick={() => setIsTransferOpen(true)} title="Transfer Host" aria-label="Transfer Host" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-on-surface hover:bg-surface transition-colors font-label-mono text-xs border border-transparent hover:border-outline">
+              <span className="material-symbols-outlined text-sm">swap_horiz</span>
+            </button>
+          )}
+
           <Button variant="danger" onClick={() => navigate('/dashboard')} icon={<span className="material-symbols-outlined text-sm">logout</span>}>
             Leave
           </Button>
@@ -137,6 +163,7 @@ export const RoomPage: React.FC = () => {
          {/* Video Area (left side) */}
          <div className="w-full lg:flex-3 flex flex-col p-3 md:p-4 lg:min-h-0 lg:overflow-y-auto custom-scrollbar relative">
            <FloatingReactions reactions={reactions} onRemove={removeReaction} />
+           <ChangeRequestsPanel />
            <YouTubeWebsite
              onChangeVideoClick={() => setIsChangeVideoOpen(true)}
              onSendReaction={sendEmojiReaction}
@@ -191,6 +218,7 @@ export const RoomPage: React.FC = () => {
       {/* Modals */}
       <ChangeVideoModal isOpen={isChangeVideoOpen} onClose={() => setIsChangeVideoOpen(false)} />
       <RoleManagementModal isOpen={isRoleModalOpen} onClose={() => setIsRoleModalOpen(false)} />
+      <TransferHostModal isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)} />
     </div>
   );
 };
