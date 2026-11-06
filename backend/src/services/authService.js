@@ -1,28 +1,7 @@
 const { User, Otp } = require('../models');
 const Hasher = require('../utilities/hasher.js');
 const jwt = require('jsonwebtoken');
-const emailService = require('./emailService.js');
-
-const sendOtp = async (emailAddress) => {
-  const existingUser = await User.findOne({ where: { emailAddress } });
-  if (existingUser) {
-    throw new Error('Email address already registered.');
-  }
-
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-  await Otp.destroy({ where: { emailAddress } });
-  await Otp.create({
-    emailAddress,
-    otp,
-    expiresAt
-  });
-
-  await emailService.sendOtpEmail(emailAddress, otp);
-
-  return { emailAddress };
-};
+const { sendOtp } = require('./otpService.js');
 
 const registerUser = async (username, emailAddress, password, otp) => {
   const existingUser = await User.findOne({ where: { emailAddress } });

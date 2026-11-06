@@ -1,5 +1,6 @@
 import { LoginPayload, RegisterPayload, AuthResponse, RawAuthResponse, RawMeResponse, User } from '../types/user';
 import { apiClient } from './api.client';
+import env from '../config/env';
 import { setCookie, getCookie, deleteCookie } from '../utils/cookie';
 
 class AuthService {
@@ -19,7 +20,7 @@ class AuthService {
   }
 
   async sendOtp(emailAddress: string): Promise<void> {
-    await apiClient.post('/auth/send-otp', { emailAddress });
+    await apiClient.post(`${env.OTP_API_BASE_URL}/auth/send-otp`, { emailAddress });
   }
 
   async register(payload: RegisterPayload): Promise<AuthResponse> {

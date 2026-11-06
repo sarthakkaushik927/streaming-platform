@@ -10,7 +10,7 @@ const sendOtp = async (req, res) => {
     return res.status(200).json({ success: true, message: 'Verification OTP sent successfully.', data: result });
   } catch (error) {
     logger.error(`"authController.js","sendOtp()","Error: ${error.message}"`);
-    return res.status(400).json({ success: false, message: error.message });
+    return res.status(error.status || 400).json({ success: false, message: error.message });
   }
 };
 

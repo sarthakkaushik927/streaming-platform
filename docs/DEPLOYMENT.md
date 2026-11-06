@@ -23,9 +23,20 @@ Use a Neon PostgreSQL connection URL as `DATABASE_URL`, ideally in the same regi
 | `DATABASE_URL` | Yes | Neon connection URL. Production connections always use SSL |
 | `JWT_SECRET` | Yes | A long random string |
 | `CORS_ORIGIN` | Yes | The frontend URL, with no trailing slash |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | For signup | `smtp.gmail.com`, `587` and `false` for Gmail |
-| `SMTP_USER`, `SMTP_PASS` | For signup | Gmail address and app password. Without these, signup codes only go to the server log |
 | `GROQ_API_KEY` | For the chatbot | Without it, `/chat` returns an error |
+
+## Signup email function (Vercel)
+
+Render's free plan may block outgoing email, so requests for signup codes go to a small function on Vercel at `/api/v1/auth/send-otp`. It stores the code in the shared database and emails it, and Render checks the code at signup. Deploy it as its own Vercel project from the `backend` folder.
+
+| Environment variable | Required | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | The same Neon URL as the backend |
+| `CORS_ORIGIN` | Yes | The frontend URL, with no trailing slash |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | Yes | `smtp.gmail.com`, `587` and `false` for Gmail |
+| `SMTP_USER`, `SMTP_PASS` | Yes | Gmail address and app password |
+
+Each email address can request a new code every 30 seconds.
 
 ## Frontend (Vercel)
 
@@ -40,6 +51,7 @@ vercel --prod
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | Yes | `https://<backend>/api/v1` |
 | `VITE_WS_URL` | Yes | `https://<backend>` |
+| `VITE_OTP_API_BASE_URL` | Yes | `https://<email function>/api/v1` |
 | `VITE_YOUTUBE_API_KEY` | For video search | Included in the public site code, so restrict it to your domain in Google Cloud |
 
 Vite reads these at build time, so redeploy after changing them.
@@ -47,7 +59,6 @@ Vite reads these at build time, so redeploy after changing them.
 ## Limits on free plans
 
 - Render's free web services go to sleep when idle, so the first request after a quiet period can take close to a minute. Open the site once before a demo.
-- Render's free plan may block outgoing email ports. If signup emails fail, check the Render logs. The options are a paid instance or an email API.
 - Neon suspends the database when idle, which can add a short delay to the first query afterwards.
 
 ## Scaling beyond one server

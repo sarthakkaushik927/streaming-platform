@@ -34,3 +34,5 @@ Thumbs.db
 logic.md
 # Reference Architecture Document
 ARCHITECTURE.md
+.vercel
+.env*

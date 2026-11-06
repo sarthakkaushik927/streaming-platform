@@ -3,7 +3,7 @@ import { getCookie } from '../utils/cookie';
 
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${env.API_BASE_URL}${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${env.API_BASE_URL}${endpoint}`;
     
     const headers = new Headers(options.headers);
     const token = getCookie('syncstream-token') || localStorage.getItem('syncstream-token');

@@ -1,0 +1,8 @@
+{
+  "framework": null,
+  "functions": {
+    "api/v1/auth/send-otp.js": {
+      "maxDuration": 30
+    }
+  }
+}

@@ -45,6 +45,7 @@ const sendOtpValidation = async (req, res, next) => {
 };
 
 module.exports = {
+  sendOtpSchema,
   registerValidation,
   loginValidation,
   sendOtpValidation

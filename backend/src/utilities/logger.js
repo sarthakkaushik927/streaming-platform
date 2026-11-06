@@ -1,13 +1,18 @@
 const winston = require('winston');
-require('winston-daily-rotate-file');
 const moment = require('moment-timezone');
 
-const transport = new winston.transports.DailyRotateFile({
-  dirname: 'watch-party-logs',
-  filename: '%DATE%.log',
-  datePattern: 'YYYY-MM-DD',
-  maxFiles: '60d'
-});
+const transports = [new winston.transports.Console()];
+
+// Vercel functions have a read-only disk, so they only log to the console.
+if (!process.env.VERCEL) {
+  require('winston-daily-rotate-file');
+  transports.push(new winston.transports.DailyRotateFile({
+    dirname: 'watch-party-logs',
+    filename: '%DATE%.log',
+    datePattern: 'YYYY-MM-DD',
+    maxFiles: '60d'
+  }));
+}
 
 const logger = winston.createLogger({
   format: winston.format.combine(
@@ -16,10 +21,7 @@ const logger = winston.createLogger({
       return `${timestamp}, [${level.toUpperCase()}], ${message}`;
     })
   ),
-  transports: [
-    new winston.transports.Console(),
-    transport
-  ]
+  transports
 });
 
 module.exports = logger;
