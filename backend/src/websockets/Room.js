@@ -1,9 +1,18 @@
 const { Role } = require('./Participant.js');
 
+/*
+  Two ideas of "host" live here:
+  - ownerId is the real host. It is saved on the room and only changes when the host role is transferred.
+  - hostId is whoever holds the host role right now. While the real host is away, a stand-in covers
+    (a moderator first, otherwise the first participant), and standIn remembers the role to give them back.
+  When the real host returns, they take the role back and the stand-in returns to their old role.
+*/
 class Room {
-  constructor(id, hostId, initialVideoId = 'dQw4w9WgXcQ') {
+  constructor(id, ownerId, initialVideoId = 'dQw4w9WgXcQ') {
     this.id = id;
-    this.hostId = hostId;
+    this.ownerId = ownerId;
+    this.hostId = ownerId;
+    this.standIn = null; // { userId, previousRole } while someone covers for the real host
     this.participants = new Map(); // Key: userId, Value: Participant
     this.changeRequests = new Map(); // Key: requestId, Value: pending playback change request
     this.createdAt = new Date();
@@ -15,6 +24,14 @@ class Room {
     };
   }
 
+  isOwner(userId) {
+    return String(this.ownerId) === String(userId);
+  }
+
+  isStandIn(userId) {
+    return Boolean(this.standIn) && String(this.standIn.userId) === String(userId);
+  }
+
   addParticipant(p) {
     this.participants.set(p.id, p);
   }
@@ -24,29 +41,50 @@ class Room {
     if (p) {
       this.participants.delete(userId);
       this.removeChangeRequestsBy(userId);
-      // Host reassignment trigger
-      if (this.hostId === userId && this.participants.size > 0) {
-        this.reassignHost();
+      if (String(this.hostId) === String(userId)) {
+        if (this.isStandIn(userId)) this.standIn = null;
+        if (this.participants.size > 0) this.reassignHost();
+        else this.resetToOwner();
       }
     }
     return p || null;
   }
 
+  // Someone covers while the real host is away: a moderator first, otherwise the first participant.
   reassignHost() {
-    // 1. Prioritize Moderators
-    for (const p of this.participants.values()) {
-      if (p.role === Role.MODERATOR) {
-        this.hostId = p.id;
-        p.updateRole(Role.HOST);
-        return;
-      }
-    }
-    // 2. Fallback to first participant
-    const nextUser = this.participants.values().next().value;
-    if (nextUser) {
-      this.hostId = nextUser.id;
-      nextUser.updateRole(Role.HOST);
-    }
+    const participants = Array.from(this.participants.values());
+    const next = participants.find((p) => p.role === Role.MODERATOR) || participants[0];
+    if (!next) return;
+    this.standIn = { userId: next.id, previousRole: next.role };
+    this.hostId = next.id;
+    next.updateRole(Role.HOST);
+  }
+
+  // An empty room waits for its real host.
+  resetToOwner() {
+    this.hostId = this.ownerId;
+    this.standIn = null;
+  }
+
+  /*
+    The real host is back. Returns the stand-in and the role they went back to, or null if nobody was covering,
+    so the caller can save it.
+  */
+  returnHostToOwner() {
+    const standIn = this.standIn;
+    this.hostId = this.ownerId;
+    this.standIn = null;
+    if (!standIn) return null;
+    const participant = this.participants.get(standIn.userId);
+    if (participant) participant.updateRole(standIn.previousRole);
+    return { userId: standIn.userId, role: standIn.previousRole };
+  }
+
+  // A deliberate handover: the new host becomes the real host, so the same rules protect them.
+  transferHost(newHostId) {
+    this.ownerId = newHostId;
+    this.hostId = newHostId;
+    this.standIn = null;
   }
 
   getParticipant(userId) {

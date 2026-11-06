@@ -118,27 +118,34 @@ const registerSocketHandlers = (io) => {
     });
   };
 
-  // Takes a user out of a room, and passes on the host role if they were the host.
+  /*
+    Takes a user out of a room. If they held the host role, someone stands in.
+    The room's saved host (the real host) does not change here, so the real host gets the role back
+    when they return. A stand-in who leaves goes back to the role they had before standing in.
+  */
   const removeFromRoom = async (room, user) => {
     const roomId = room.id;
-    const originalHostId = room.hostId;
+    const wasHost = String(room.hostId) === String(user.id);
+    const leavingStandIn = room.isStandIn(user.id) ? room.standIn : null;
     room.removeParticipant(user.id);
-    const currentHostId = room.hostId;
+    const newHostId = room.hostId;
 
-    if (originalHostId === user.id && currentHostId && currentHostId !== originalHostId) {
-      await DBRoom.update({ hostId: currentHostId }, { where: { id: roomId } });
-      await DBParticipant.update({ role: Role.PARTICIPANT }, { where: { roomId, userId: user.id } });
-      await DBParticipant.update({ role: Role.HOST }, { where: { roomId, userId: currentHostId } });
+    if (leavingStandIn) {
+      await DBParticipant.update({ role: leavingStandIn.previousRole }, { where: { roomId, userId: user.id } });
+    }
 
-      logger.info(`"socketHandlers.js","disconnecting","Host changed in room ${roomId} from User ${user.username} to User ID ${currentHostId}"`);
+    if (wasHost && newHostId && room.getParticipant(newHostId)) {
+      await DBParticipant.update({ role: Role.HOST }, { where: { roomId, userId: newHostId } });
+
+      logger.info(`"socketHandlers.js","disconnecting","User ID ${newHostId} stands in as host of room ${roomId} while ${user.username} is away"`);
 
       io.to(roomId).emit('role_assigned', {
-        userId: currentHostId,
+        userId: newHostId,
         role: Role.HOST,
         participants: Array.from(room.participants.values())
       });
 
-      cancelRequestsBy(room, currentHostId);
+      cancelRequestsBy(room, newHostId);
     }
 
     await DBParticipant.update({ status: 'DISCONNECTED' }, { where: { roomId, userId: user.id } });
@@ -207,7 +214,17 @@ const registerSocketHandlers = (io) => {
 
         // Determine or assign participant role
         let role = Role.PARTICIPANT;
-        if (room.hostId === user.id) {
+        let returnedStandIn = null;
+        if (room.isOwner(user.id)) {
+          // The real host is back: they take the role back from whoever was standing in.
+          role = Role.HOST;
+          returnedStandIn = room.returnHostToOwner();
+          if (returnedStandIn) {
+            await DBParticipant.update({ role: returnedStandIn.role }, { where: { roomId, userId: returnedStandIn.userId } });
+            cancelRequestsBy(room, user.id);
+          }
+        } else if (String(room.hostId) === String(user.id)) {
+          // A stand-in host reconnecting while the real host is still away.
           role = Role.HOST;
         } else {
           // Check if there is an existing role in the database
@@ -215,7 +232,8 @@ const registerSocketHandlers = (io) => {
             where: { roomId, userId: user.id }
           });
           if (existingParticipant) {
-            role = existingParticipant.role;
+            // Only the real host or the current stand-in can be host; an old saved HOST row is out of date.
+            role = existingParticipant.role === Role.HOST ? Role.PARTICIPANT : existingParticipant.role;
           } else {
             // Persist new participant. A page load can send two joins at once, so ignore a duplicate row.
             await DBParticipant.bulkCreate(
@@ -235,6 +253,15 @@ const registerSocketHandlers = (io) => {
         );
 
         logger.info(`"socketHandlers.js","join_room","User ${user.username} joined room ${roomId} as ${role}"`);
+
+        if (returnedStandIn) {
+          logger.info(`"socketHandlers.js","join_room","Room ${roomId}: host ${user.username} returned; User ID ${returnedStandIn.userId} is ${returnedStandIn.role} again"`);
+          io.to(roomId).emit('role_assigned', {
+            userId: user.id,
+            role: Role.HOST,
+            participants: Array.from(room.participants.values())
+          });
+        }
 
         // Send initial state back to user
         socket.emit('user_joined', {
@@ -490,9 +517,9 @@ const registerSocketHandlers = (io) => {
         const currentHost = normalizedCurrentId ? room.getParticipant(normalizedCurrentId) : null;
         if (currentHost) currentHost.updateRole(Role.PARTICIPANT);
 
-        // Promote target → HOST in-memory; store normalized key as new hostId
+        // Promote target → HOST in-memory. A transfer makes them the real host, so they get it back after leaving too.
         targetParticipant.updateRole(Role.HOST);
-        room.hostId = normalizedTargetId;
+        room.transferHost(normalizedTargetId);
 
         // Persist both role changes and new hostId to DB
         await DBRoom.update(
