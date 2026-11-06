@@ -325,6 +325,48 @@ html.light {
   }
 }
 
+/*
+  Fullscreen player: the video fills the screen on black and the controls become a slim dark bar,
+  whatever the theme. Colour utilities read the --color-* values, so those are what change here.
+*/
+.player-frame:fullscreen {
+  --color-card: #0e0b08;
+  --color-ink: #f4ebdd;
+  --color-muted: #b5a893;
+  --color-line: rgba(244, 235, 221, 0.14);
+  --color-subtle: #251d15;
+  --color-accent: #ffc531;
+  --color-accent-ink: #0e0b08;
+  --color-accent-soft: rgba(255, 197, 49, 0.13);
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+  color: #f4ebdd;
+}
+
+.player-frame:fullscreen .player-stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  background: #000;
+}
+
+.player-frame:fullscreen .player-stage > .marquee-bulbs {
+  display: none;
+}
+
+.player-frame:fullscreen .player-screen {
+  flex: 1;
+  height: auto;
+  aspect-ratio: auto;
+}
+
 @keyframes ticker {
   to {
     transform: translateX(-50%);

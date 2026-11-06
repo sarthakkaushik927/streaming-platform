@@ -89,9 +89,12 @@ export const RoomPage: React.FC = () => {
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 lg:flex-row lg:px-8">
         <div className="thin-scrollbar relative min-w-0 flex-1 lg:overflow-y-auto">
-          <FloatingReactions reactions={reactions} onRemove={removeReaction} />
           <ChangeRequestsPanel />
-          <YouTubeWebsite onChangeVideoClick={() => setIsChangeVideoOpen(true)} onSendReaction={sendEmojiReaction} />
+          <YouTubeWebsite
+            onChangeVideoClick={() => setIsChangeVideoOpen(true)}
+            onSendReaction={sendEmojiReaction}
+            overlay={<FloatingReactions reactions={reactions} onRemove={removeReaction} />}
+          />
         </div>
 
         <aside className="flex w-full shrink-0 flex-col gap-4 lg:w-90 xl:w-96">

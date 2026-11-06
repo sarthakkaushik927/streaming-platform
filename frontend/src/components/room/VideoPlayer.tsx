@@ -12,7 +12,7 @@ import { describeChange } from '../../utils/changeRequest';
 import env from '../../config/env';
 import {
   Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX,
-  Search, Loader2, Smile, Video, Maximize
+  Search, Loader2, Smile, Video, Maximize, Minimize
 } from 'lucide-react';
 
 interface VideoRecommendation {
@@ -57,9 +57,11 @@ const PLAYER_OPTIONS: YouTubeProps['opts'] = {
 interface YouTubeWebsiteProps {
   onChangeVideoClick?: () => void;
   onSendReaction?: (emoji: string) => void;
+  /** Drawn on top of the player, such as floating reactions, so it stays over the video on every screen size. */
+  overlay?: React.ReactNode;
 }
 
-export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoClick, onSendReaction }) => {
+export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoClick, onSendReaction, overlay }) => {
   const { playerState, play, pause, seek, changeVideo } = usePlayer();
   const { room, participants, selfId, requestChange, myPendingRequest } = useRoom();
 
@@ -184,6 +186,14 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
     }
   }, [playerState.state, playerState.currentTime, playerState.timestamp, playerState.videoId, activeVideoId]);
 
+  // Tracks fullscreen so the button can switch between enter and exit.
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(document.fullscreenElement === videoContainerRef.current);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
   // ── Manual controls ──
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -255,11 +265,15 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
 
   return (
     <div className="flex flex-col gap-4">
-      <div ref={videoContainerRef} className="overflow-hidden rounded-sm border border-line bg-card">
+      <div
+        ref={videoContainerRef}
+        className="player-frame relative w-full overflow-hidden rounded-sm border border-line bg-card"
+      >
+        {overlay}
         {/* The screen sits on a red curtain stage with marquee bulbs above and below. */}
-        <div className="curtain p-2 sm:p-3">
+        <div className="player-stage curtain @container p-2 sm:p-3">
           <div aria-hidden="true" className="marquee-bulbs mb-2" />
-          <div className="relative aspect-video w-full bg-screen">
+          <div className="player-screen relative aspect-video w-full bg-screen lg:aspect-auto lg:h-[max(16rem,min(56.25cqw,calc(100svh-var(--nav-h)-19rem)))]">
             {/* Stops participants clicking the YouTube timeline directly */}
             {!canControl && (
               <div className="absolute inset-0 z-30 cursor-not-allowed" title="Playback is controlled by the host" />
@@ -296,8 +310,8 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
             {onChangeVideoClick && (
               <Button variant="outline" onClick={onChangeVideoClick} icon={<Video className="size-4" />}>{canControl ? 'Change Video' : 'Request Video Change'}</Button>
             )}
-            <IconButton label="Toggle fullscreen" onClick={handleFullscreen}>
-              <Maximize className="size-4" />
+            <IconButton label={isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen'} onClick={handleFullscreen}>
+              {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
             </IconButton>
           </div>
         </div>
@@ -349,17 +363,17 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
         )}
 
         {!searching && searchResults && searchResults.length > 0 && (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {searchResults.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => handleVideoSelect(item.videoId)}
-                className="flex gap-3 rounded-sm p-2 text-left transition-colors hover:bg-subtle"
+                className="flex w-full min-w-0 gap-3 rounded-sm p-2 text-left transition-colors hover:bg-subtle"
               >
                 <img src={item.thumbnail} alt="" className="aspect-video w-28 shrink-0 bg-subtle object-cover" />
                 <span className="min-w-0">
-                  <span className="line-clamp-2 text-sm font-semibold text-ink">{item.title}</span>
+                  <span className="line-clamp-2 text-sm font-semibold wrap-break-word text-ink">{item.title}</span>
                   <span className="mt-1 block truncate text-xs text-muted">{item.channel}</span>
                 </span>
               </button>
