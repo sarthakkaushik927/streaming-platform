@@ -5,3 +5,8 @@ dist/
 !.env.example
 .DS_Store
 Thumbs.db
+
+# Local AI design skills
+.claude/
+.agents/
+skills-lock.json
