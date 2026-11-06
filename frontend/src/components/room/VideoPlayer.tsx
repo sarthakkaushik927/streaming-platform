@@ -34,6 +34,10 @@ interface YouTubeSearchItem {
 
 const REACTION_EMOJIS = ['🔥', '❤️', '👏', '🎉', '😮', '🚀'];
 
+const YT_PLAYING = 1;
+const YT_PAUSED = 2;
+const SEEK_DETECT_SECONDS = 2;
+
 // Must stay constant: react-youtube destroys and rebuilds the player whenever these change.
 const PLAYER_OPTIONS: YouTubeProps['opts'] = {
   width: '100%',
@@ -69,13 +73,43 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
 
   const activeVideoId = extractYouTubeVideoId(playerState.videoId || room?.initialVideoId || '8vnrqEudzWQ');
 
-  const currentUserRole = participants.find(p => String(p.userId) === String(selfId))?.role || Role.VIEWER;
+  const currentUserRole = participants.find(p => String(p.userId) === String(selfId))?.role || Role.PARTICIPANT;
   const canControl = currentUserRole === Role.HOST || currentUserRole === Role.MODERATOR;
   const canControlRef = useRef(canControl);
 
   useEffect(() => {
     canControlRef.current = canControl;
   }, [canControl]);
+
+  // YouTube has no seek event, so spot timeline clicks and drags by watching for position jumps.
+  const seekCheckRef = useRef({ playerState, seek, activeVideoId });
+  useEffect(() => {
+    seekCheckRef.current = { playerState, seek, activeVideoId };
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const player = playerRef.current;
+      if (!player || !canControlRef.current) return;
+      const { playerState: room, seek: sendSeek, activeVideoId: videoId } = seekCheckRef.current;
+      try {
+        // Only compare when the player and room agree, which skips loading and buffering.
+        const ytState = player.getPlayerState();
+        const bothPlaying = room.state === 'playing' && ytState === YT_PLAYING;
+        const bothPaused = room.state === 'paused' && ytState === YT_PAUSED;
+        if (!bothPlaying && !bothPaused) return;
+
+        const elapsedSeconds = bothPlaying ? (Date.now() - room.timestamp) / 1000 : 0;
+        const position = player.getCurrentTime();
+        if (Math.abs(position - (room.currentTime + elapsedSeconds)) > SEEK_DETECT_SECONDS) {
+          sendSeek(position, videoId);
+        }
+      } catch {
+        // The player throws while its iframe is loading or being replaced. The next check retries.
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // ── Mute / unmute via react-youtube API ──
   const toggleMute = () => {
@@ -110,7 +144,7 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
   const onStateChange: YouTubeProps['onStateChange'] = (event) => {
     const YT_STATE = { ENDED: 0, PLAYING: 1, PAUSED: 2 };
 
-    // Viewer: enforce host's state
+    // Participant: enforce host's state
     if (!canControlRef.current) {
       if (event.data === YT_STATE.ENDED) { playerRef.current?.pauseVideo(); return; }
       if (playerState.state === 'playing' && event.data !== YT_STATE.PLAYING) {
@@ -145,7 +179,7 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
     } catch {
       // The player throws while its iframe is loading or being replaced. onPlayerReady syncs it once it's ready.
     }
-  }, [playerState.state, playerState.currentTime, playerState.videoId, activeVideoId]);
+  }, [playerState.state, playerState.currentTime, playerState.timestamp, playerState.videoId, activeVideoId]);
 
   // ── Manual controls ──
   const handleFullscreen = () => {
@@ -226,7 +260,7 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
         {/* Video player */}
         <div className="relative w-full aspect-video bg-black flex-1 min-h-75">
 
-          {/* Viewer overlay — blocks timeline scrubbing */}
+          {/* Participant overlay — blocks timeline scrubbing */}
           {!canControl && (
             <div className="absolute inset-0 z-30 bg-transparent cursor-not-allowed" title="Playback is controlled by the host" />
           )}

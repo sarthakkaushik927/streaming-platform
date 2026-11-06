@@ -1,8 +1,7 @@
 const Role = {
   HOST: 'HOST',
   MODERATOR: 'MODERATOR',
-  PARTICIPANT: 'PARTICIPANT',
-  VIEWER: 'VIEWER'
+  PARTICIPANT: 'PARTICIPANT'
 };
 
 class Participant {

@@ -2,7 +2,6 @@ export enum Role {
   HOST = 'HOST',
   MODERATOR = 'MODERATOR',
   PARTICIPANT = 'PARTICIPANT',
-  VIEWER = 'VIEWER',
 }
 
 export interface Participant {

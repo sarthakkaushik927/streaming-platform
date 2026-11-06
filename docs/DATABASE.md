@@ -21,8 +21,8 @@ Deleting a room or user also deletes the rows that belong to it.
 | --- | --- | --- |
 | `users` | `id` (UUID), `username`, `emailAddress` (unique), `password` (bcrypt hash) | Accounts |
 | `otps` | `id`, `email_address` (unique), `otp`, `expires_at` | Pending signup codes, deleted after signup |
-| `rooms` | `id` (UUID), `host_id`, `title`, `current_video_id`, `current_playback_time`, `is_playing` | Rooms and their saved playback state |
-| `participants` | `room_id` + `user_id`, `role`, `status` | Each user's role in a room. `role` is `HOST`, `MODERATOR`, `PARTICIPANT` or `VIEWER`; `status` is `ACTIVE` or `DISCONNECTED` |
+| `rooms` | `id` (UUID), `host_id`, `created_by`, `title`, `current_video_id`, `current_playback_time`, `is_playing` | Rooms and their saved playback state |
+| `participants` | `room_id` + `user_id`, `role`, `status` | Each user's role in a room. `role` is `HOST`, `MODERATOR` or `PARTICIPANT`; `status` is `ACTIVE` or `DISCONNECTED` |
 | `removed_participants` | `room_id` + `user_id`, `removed_at` | Users the host removed, who can't rejoin that room |
 | `chat_messages` | `id`, `room_id`, `user_id`, `message` | Chat history |
 | `playback_logs` | `id`, `room_id`, `user_id`, `action`, `video_id`, `action_timestamp` | Playback history. `action` is `PLAY`, `PAUSE`, `SEEK` or `CHANGE_VIDEO` |

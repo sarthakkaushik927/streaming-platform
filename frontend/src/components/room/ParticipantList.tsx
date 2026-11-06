@@ -7,14 +7,13 @@ import { useParticipants } from '../../hooks/useParticipants';
 
 export const ParticipantList: React.FC = () => {
   const { participants, assignRole, selfId } = useRoom();
-  const { removeParticipant } = useParticipants();
+  const { removeParticipant, transferHost } = useParticipants();
 
-  // Sort: Host first, then Mods, then Participants, then Viewers
+  // Sort: Host first, then Moderators, then Participants
   const roleWeight = {
     [Role.HOST]: 1,
     [Role.MODERATOR]: 2,
     [Role.PARTICIPANT]: 3,
-    [Role.VIEWER]: 4,
   };
   
   const sortedParticipants = [...participants].sort((a, b) => {
@@ -23,17 +22,19 @@ export const ParticipantList: React.FC = () => {
 
   const currentUserRole = participants.find(p => String(p.userId) === String(selfId))?.role;
   const isCurrentUserHost = currentUserRole === Role.HOST;
+  const canManage = isCurrentUserHost || currentUserRole === Role.MODERATOR;
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<'remove' | 'transfer' | null>(null);
 
-  const handleRemoveClick = (userId: string) => {
-    // Removal is permanent for this room, so it takes a second click.
-    if (confirmRemoveId !== userId) {
-      setConfirmRemoveId(userId);
+  // Removing someone and transferring host can't be undone by the user, so each takes a second click.
+  const handleConfirmedAction = (action: 'remove' | 'transfer', userId: string) => {
+    if (confirmAction !== action) {
+      setConfirmAction(action);
       return;
     }
-    removeParticipant(userId);
-    setConfirmRemoveId(null);
+    if (action === 'remove') removeParticipant(userId);
+    else transferHost(userId);
+    setConfirmAction(null);
     setOpenMenuId(null);
   };
 
@@ -64,12 +65,12 @@ export const ParticipantList: React.FC = () => {
                   <RoleBadge role={participant.role} />
                 </div>
               </div>
-              {isCurrentUserHost && String(participant.userId) !== String(selfId) && (
+              {canManage && participant.role !== Role.HOST && String(participant.userId) !== String(selfId) && (
                 <div className="relative">
-                  <button 
+                  <button
                     onClick={() => {
                       setOpenMenuId(openMenuId === participant.userId ? null : participant.userId);
-                      setConfirmRemoveId(null);
+                      setConfirmAction(null);
                     }}
                     aria-label={`Manage ${participant.username}`}
                     className="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant"
@@ -77,34 +78,39 @@ export const ParticipantList: React.FC = () => {
                     <span className="material-symbols-outlined text-sm">more_vert</span>
                   </button>
                   {openMenuId === participant.userId && (
-                    <div className="absolute right-8 top-0 w-36 bg-surface-container-highest border border-outline-variant/60 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
-                      <button 
-                        onClick={() => { assignRole(participant.userId, Role.MODERATOR); setOpenMenuId(null); }}
-                        className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
-                      >
-                        <span className="material-symbols-outlined text-xs text-primary">shield</span>
-                        Make Moderator
-                      </button>
-                      <button 
-                        onClick={() => { assignRole(participant.userId, Role.PARTICIPANT); setOpenMenuId(null); }}
-                        className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
-                      >
-                        <span className="material-symbols-outlined text-xs text-on-surface-variant">group</span>
-                        Make Participant
-                      </button>
-                      <button 
-                        onClick={() => { assignRole(participant.userId, Role.VIEWER); setOpenMenuId(null); }}
-                        className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
-                      >
-                        <span className="material-symbols-outlined text-xs text-on-surface-variant">visibility</span>
-                        Make Viewer
-                      </button>
+                    <div className="absolute right-8 top-0 w-44 bg-surface-container-highest border border-outline-variant/60 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+                      {participant.role === Role.PARTICIPANT ? (
+                        <button
+                          onClick={() => { assignRole(participant.userId, Role.MODERATOR); setOpenMenuId(null); }}
+                          className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
+                        >
+                          <span className="material-symbols-outlined text-xs text-primary">shield</span>
+                          Make Moderator
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { assignRole(participant.userId, Role.PARTICIPANT); setOpenMenuId(null); }}
+                          className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
+                        >
+                          <span className="material-symbols-outlined text-xs text-on-surface-variant">group</span>
+                          Demote to Participant
+                        </button>
+                      )}
+                      {isCurrentUserHost && (
+                        <button
+                          onClick={() => handleConfirmedAction('transfer', participant.userId)}
+                          className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-on-surface"
+                        >
+                          <span className="material-symbols-outlined text-xs text-primary">swap_horiz</span>
+                          {confirmAction === 'transfer' ? 'Confirm transfer' : 'Transfer Host'}
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleRemoveClick(participant.userId)}
+                        onClick={() => handleConfirmedAction('remove', participant.userId)}
                         className="w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2 text-error"
                       >
                         <span className="material-symbols-outlined text-xs">person_remove</span>
-                        {confirmRemoveId === participant.userId ? 'Confirm remove' : 'Remove from room'}
+                        {confirmAction === 'remove' ? 'Confirm remove' : 'Remove from room'}
                       </button>
                     </div>
                   )}

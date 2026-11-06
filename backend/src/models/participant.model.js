@@ -13,7 +13,7 @@ const Participant = db.define('participants', {
     field: 'user_id'
   },
   role: {
-    type: DataTypes.ENUM('HOST', 'MODERATOR', 'PARTICIPANT', 'VIEWER'),
+    type: DataTypes.ENUM('HOST', 'MODERATOR', 'PARTICIPANT'),
     defaultValue: 'PARTICIPANT',
     allowNull: false
   },

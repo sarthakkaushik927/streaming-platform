@@ -27,7 +27,7 @@ const REMOVED_MESSAGE = 'You were removed from this room by the host.';
 const INTENTIONAL_LEAVE = 'client namespace disconnect';
 const RECONNECT_GRACE_MS = Number(process.env.RECONNECT_GRACE_MS) || 30000;
 
-const canControlPlayback = (participant) =>
+const isHostOrModerator = (participant) =>
   Boolean(participant) && (participant.role === Role.HOST || participant.role === Role.MODERATOR);
 
 // Builds a pending request from client input, or returns null if the input is invalid.
@@ -94,7 +94,7 @@ const registerSocketHandlers = (io) => {
     const requests = room.getChangeRequests();
     for (const participant of room.participants.values()) {
       io.to(participant.socketId).emit('change_requests_updated', {
-        requests: canControlPlayback(participant) ? requests : []
+        requests: isHostOrModerator(participant) ? requests : []
       });
     }
   };
@@ -265,7 +265,7 @@ const registerSocketHandlers = (io) => {
         const room = roomManager.getRoom(roomId);
         if (!room) return;
 
-        if (!canControlPlayback(room.getParticipant(user.id))) {
+        if (!isHostOrModerator(room.getParticipant(user.id))) {
           socket.emit('error_event', { message: 'Permission Denied: Only Host or Moderator can change playback.' });
           return;
         }
@@ -286,7 +286,7 @@ const registerSocketHandlers = (io) => {
         const room = roomManager.getRoom(roomId);
         if (!room) return;
 
-        if (!canControlPlayback(room.getParticipant(user.id))) {
+        if (!isHostOrModerator(room.getParticipant(user.id))) {
           socket.emit('error_event', { message: 'Permission Denied: Only Host or Moderator can seek.' });
           return;
         }
@@ -306,7 +306,7 @@ const registerSocketHandlers = (io) => {
         const room = roomManager.getRoom(roomId);
         if (!room) return;
 
-        if (!canControlPlayback(room.getParticipant(user.id))) {
+        if (!isHostOrModerator(room.getParticipant(user.id))) {
           socket.emit('error_event', { message: 'Permission Denied: Only Host or Moderator can change videos.' });
           return;
         }
@@ -326,7 +326,7 @@ const registerSocketHandlers = (io) => {
         const participant = room.getParticipant(user.id);
         if (!participant) return;
 
-        if (canControlPlayback(participant)) {
+        if (isHostOrModerator(participant)) {
           socket.emit('error_event', { message: 'You can already control playback directly.' });
           return;
         }
@@ -353,7 +353,7 @@ const registerSocketHandlers = (io) => {
         const room = roomManager.getRoom(socket.roomId);
         if (!room) return;
 
-        if (!canControlPlayback(room.getParticipant(user.id))) {
+        if (!isHostOrModerator(room.getParticipant(user.id))) {
           socket.emit('error_event', { message: 'Permission Denied: Only Host or Moderator can review requests.' });
           return;
         }
@@ -377,15 +377,20 @@ const registerSocketHandlers = (io) => {
       }
     });
 
-    // Event: Assign Role (Host only)
+    // Event: Assign Role (Host or Moderator)
     socket.on('assign_role', async ({ targetUserId, newRole }) => {
       try {
         const roomId = socket.roomId;
         if (!roomId) return;
 
         const room = roomManager.getRoom(roomId);
-        if (!room || room.hostId !== user.id) {
-          socket.emit('error_event', { message: 'Permission Denied: Only the Host can assign roles.' });
+        if (!room || !isHostOrModerator(room.getParticipant(user.id))) {
+          socket.emit('error_event', { message: 'Permission Denied: Only the Host or a Moderator can assign roles.' });
+          return;
+        }
+
+        if (targetUserId === user.id) {
+          socket.emit('error_event', { message: 'You cannot change your own role.' });
           return;
         }
 
@@ -395,8 +400,18 @@ const registerSocketHandlers = (io) => {
           return;
         }
 
+        if (targetParticipant.role === Role.HOST) {
+          socket.emit('error_event', { message: 'The Host cannot be demoted.' });
+          return;
+        }
+
         if (newRole === Role.HOST) {
           socket.emit('error_event', { message: 'To transfer ownership, please perform a Host Transfer.' });
+          return;
+        }
+
+        if (newRole !== Role.MODERATOR && newRole !== Role.PARTICIPANT) {
+          socket.emit('error_event', { message: 'That role is not valid.' });
           return;
         }
 
@@ -417,7 +432,7 @@ const registerSocketHandlers = (io) => {
           participants: Array.from(room.participants.values())
         });
 
-        if (canControlPlayback(targetParticipant)) cancelRequestsBy(room, targetUserId);
+        if (isHostOrModerator(targetParticipant)) cancelRequestsBy(room, targetUserId);
         syncChangeRequests(room);
       } catch (error) {
         logger.error(`"socketHandlers.js","assign_role","Error: ${error.message}"`);
@@ -509,25 +524,30 @@ const registerSocketHandlers = (io) => {
       }
     });
 
-    // Event: Remove Participant (Host only)
+    // Event: Remove Participant (Host or Moderator)
     socket.on('remove_participant', async ({ targetUserId }) => {
       try {
         const roomId = socket.roomId;
         if (!roomId) return;
 
         const room = roomManager.getRoom(roomId);
-        if (!room || room.hostId !== user.id) {
-          socket.emit('error_event', { message: 'Permission Denied: Only the Host can kick participants.' });
+        if (!room || !isHostOrModerator(room.getParticipant(user.id))) {
+          socket.emit('error_event', { message: 'Permission Denied: Only the Host or a Moderator can remove participants.' });
           return;
         }
 
         if (targetUserId === user.id) {
-          socket.emit('error_event', { message: 'You cannot remove yourself. Transfer host or leave the room instead.' });
+          socket.emit('error_event', { message: 'You cannot remove yourself. Leave the room instead.' });
           return;
         }
 
         const targetParticipant = room.getParticipant(targetUserId);
         if (!targetParticipant) return;
+
+        if (targetParticipant.role === Role.HOST) {
+          socket.emit('error_event', { message: 'The Host cannot be removed.' });
+          return;
+        }
 
         room.removeParticipant(targetUserId);
 

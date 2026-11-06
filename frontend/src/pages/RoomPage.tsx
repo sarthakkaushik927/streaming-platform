@@ -10,7 +10,6 @@ import { ParticipantList } from '../components/room/ParticipantList';
 import { ChatPanel } from '../components/room/ChatPanel';
 import { SyncTelemetry } from '../components/room/SyncTelemetry';
 import { ChangeVideoModal } from '../components/room/ChangeVideoModal';
-import { RoleManagementModal } from '../components/room/RoleManagementModal';
 import { TransferHostModal } from '../components/room/TransferHostModal';
 import { ChangeRequestsPanel } from '../components/room/ChangeRequestsPanel';
 import { RoleBadge } from '../components/shared/RoleBadge';
@@ -28,7 +27,6 @@ export const RoomPage: React.FC = () => {
   const { showToast } = useToast();
   
   const [isChangeVideoOpen, setIsChangeVideoOpen] = useState(false);
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
@@ -64,7 +62,7 @@ export const RoomPage: React.FC = () => {
     if (wasRemoved) navigate('/dashboard', { replace: true });
   }, [wasRemoved, navigate]);
 
-  const currentUserRole = participants.find(p => String(p.userId) === String(selfId))?.role || Role.VIEWER;
+  const currentUserRole = participants.find(p => String(p.userId) === String(selfId))?.role || Role.PARTICIPANT;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`);
@@ -217,7 +215,6 @@ export const RoomPage: React.FC = () => {
 
       {/* Modals */}
       <ChangeVideoModal isOpen={isChangeVideoOpen} onClose={() => setIsChangeVideoOpen(false)} />
-      <RoleManagementModal isOpen={isRoleModalOpen} onClose={() => setIsRoleModalOpen(false)} />
       <TransferHostModal isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)} />
     </div>
   );

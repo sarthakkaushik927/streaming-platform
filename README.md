@@ -9,7 +9,7 @@ Watch YouTube videos together in real time. When a host or moderator plays, paus
 
 - Create a room, or join one by room code or link
 - Synchronized play, pause, seek and video changes over WebSockets
-- Host, Moderator, Participant and Viewer roles, enforced on the server
+- Host, Moderator and Participant roles, enforced on the server
 - Approval flow: participants request playback changes, and a host or moderator approves or declines them
 - The host can assign roles, transfer host, and remove participants (removed users can't rejoin that room)
 - People joining mid-video start at the current position
@@ -109,16 +109,18 @@ sequenceDiagram
 
 ## Roles
 
-| Permission | Host | Moderator | Participant / Viewer |
+| Permission | Host | Moderator | Participant |
 | --- | --- | --- | --- |
 | Play, pause, seek, change video | Yes | Yes | Request only |
 | Approve or decline requests | Yes | Yes | No |
-| Assign roles | Yes | No | No |
-| Remove participants | Yes | No | No |
+| Make someone a moderator, or demote a moderator | Yes | Yes | No |
+| Remove participants | Yes | Yes | No |
 | Transfer host | Yes | No | No |
 | Chat and reactions | Yes | Yes | Yes |
 
-The room creator is the host. Everyone else joins as a participant. If the host disconnects, a moderator takes over, or the first remaining participant if there are no moderators.
+The room creator is the host. Everyone else joins as a participant. Nobody can demote or remove the host, or change their own role.
+
+If the host leaves, a moderator takes over, or the first remaining participant if there are no moderators. A lost connection gets 30 seconds to come back first, so a brief network drop doesn't cost the host their role.
 
 ## WebSocket events
 
@@ -128,11 +130,11 @@ The room creator is the host. Everyone else joins as a participant. If the host 
 | `play_state_change` | Client to server | `{ isPlaying, currentTime, videoId }` | Play or pause (Host, Moderator) |
 | `seek` | Client to server | `{ currentTime, videoId }` | Seek (Host, Moderator) |
 | `change_video` | Client to server | `{ videoId }` | Change video (Host, Moderator) |
-| `request_change` | Client to server | `{ action, currentTime?, videoId? }` | Ask for a change (Participant, Viewer) |
+| `request_change` | Client to server | `{ action, currentTime?, videoId? }` | Ask for a change (Participant) |
 | `review_change` | Client to server | `{ requestId, approved }` | Approve or decline (Host, Moderator) |
-| `assign_role` | Client to server | `{ targetUserId, newRole }` | Assign a role (Host) |
+| `assign_role` | Client to server | `{ targetUserId, newRole }` | Assign a role (Host, Moderator) |
 | `transfer_host` | Client to server | `{ targetUserId }` | Pass the host role (Host) |
-| `remove_participant` | Client to server | `{ targetUserId }` | Remove a user (Host) |
+| `remove_participant` | Client to server | `{ targetUserId }` | Remove a user (Host, Moderator) |
 | `send_chat` | Client to server | `{ message }` | Send a chat message |
 | `reaction` | Both | `{ emoji, userId, username }` | Emoji reaction |
 | `sync_state` | Server to clients | `{ isPlaying, currentTime, videoId }` | Current playback state |

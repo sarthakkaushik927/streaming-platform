@@ -34,7 +34,7 @@ const demoSlides = [
 const demoChats = [
   { name: "Alex", text: "Frame-perfect sync is insane! 🔥", role: "HOST" },
   { name: "Sarah", text: "Ready for movie night! 🍿", role: "MOD" },
-  { name: "David", text: "Zero lag audio sync 🚀", role: "VIEWER" },
+  { name: "David", text: "Zero lag audio sync 🚀", role: "GUEST" },
 ];
 
 export const LandingPage: React.FC = () => {
