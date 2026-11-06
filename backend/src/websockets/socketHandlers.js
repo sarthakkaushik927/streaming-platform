@@ -23,6 +23,9 @@ const RequestStatus = {
 
 const YOUTUBE_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
 const REMOVED_MESSAGE = 'You were removed from this room by the host.';
+// The reason Socket.IO gives when a client disconnects on purpose, such as pressing Leave.
+const INTENTIONAL_LEAVE = 'client namespace disconnect';
+const RECONNECT_GRACE_MS = Number(process.env.RECONNECT_GRACE_MS) || 30000;
 
 const canControlPlayback = (participant) =>
   Boolean(participant) && (participant.role === Role.HOST || participant.role === Role.MODERATOR);
@@ -113,6 +116,40 @@ const registerSocketHandlers = (io) => {
     room.removeChangeRequestsBy(userId).forEach((request) => {
       sendRequestStatus(room, request, RequestStatus.CANCELLED);
     });
+  };
+
+  // Takes a user out of a room, and passes on the host role if they were the host.
+  const removeFromRoom = async (room, user) => {
+    const roomId = room.id;
+    const originalHostId = room.hostId;
+    room.removeParticipant(user.id);
+    const currentHostId = room.hostId;
+
+    if (originalHostId === user.id && currentHostId && currentHostId !== originalHostId) {
+      await DBRoom.update({ hostId: currentHostId }, { where: { id: roomId } });
+      await DBParticipant.update({ role: Role.PARTICIPANT }, { where: { roomId, userId: user.id } });
+      await DBParticipant.update({ role: Role.HOST }, { where: { roomId, userId: currentHostId } });
+
+      logger.info(`"socketHandlers.js","disconnecting","Host changed in room ${roomId} from User ${user.username} to User ID ${currentHostId}"`);
+
+      io.to(roomId).emit('role_assigned', {
+        userId: currentHostId,
+        role: Role.HOST,
+        participants: Array.from(room.participants.values())
+      });
+
+      cancelRequestsBy(room, currentHostId);
+    }
+
+    await DBParticipant.update({ status: 'DISCONNECTED' }, { where: { roomId, userId: user.id } });
+
+    logger.info(`"socketHandlers.js","disconnect","User ${user.username} left room ${roomId}"`);
+
+    io.to(roomId).emit('participants_updated', {
+      participants: Array.from(room.participants.values())
+    });
+
+    syncChangeRequests(room);
   };
 
   // Middleware to authenticate socket connections
@@ -571,67 +608,31 @@ const registerSocketHandlers = (io) => {
     });
 
     // Event: Disconnecting (Lifecycle cleanup)
-    socket.on('disconnecting', async () => {
-      try {
-        const rooms = Array.from(socket.rooms);
-        for (const roomId of rooms) {
-          // Exclude the user's private socket room ID
-          if (roomId === socket.id) continue;
+    socket.on('disconnecting', (reason) => {
+      for (const roomId of socket.rooms) {
+        // Exclude the user's private socket room ID
+        if (roomId === socket.id) continue;
 
-          const room = roomManager.getRoom(roomId);
-          if (!room) continue;
+        const room = roomManager.getRoom(roomId);
+        if (!room) continue;
 
-          const originalHostId = room.hostId;
-          room.removeParticipant(user.id);
-          const currentHostId = room.hostId;
+        // The user may already be back on a newer connection, so only their current one counts.
+        const isCurrentConnection = () => room.getParticipant(user.id)?.socketId === socket.id;
+        if (!isCurrentConnection()) continue;
 
-          // If the disconnected user was the host and a new host was reassigned
-          if (originalHostId === user.id && currentHostId && currentHostId !== originalHostId) {
-            // Update DBRoom hostId
-            await DBRoom.update(
-              { hostId: currentHostId },
-              { where: { id: roomId } }
-            );
-            // Demote old host in DB
-            await DBParticipant.update(
-              { role: Role.PARTICIPANT },
-              { where: { roomId, userId: user.id } }
-            );
-            // Promote new host in DB
-            await DBParticipant.update(
-              { role: Role.HOST },
-              { where: { roomId, userId: currentHostId } }
-            );
+        const remove = () => removeFromRoom(room, user).catch((error) => {
+          logger.error(`"socketHandlers.js","disconnecting","Error: ${error.message}"`);
+        });
 
-            logger.info(`"socketHandlers.js","disconnecting","Host changed in room ${roomId} from User ${user.username} to User ID ${currentHostId}"`);
-
-            // Broadcast the host change to clients in the room
-            io.to(roomId).emit('role_assigned', {
-              userId: currentHostId,
-              role: Role.HOST,
-              participants: Array.from(room.participants.values())
-            });
-
-            cancelRequestsBy(room, currentHostId);
-          }
-
-          // Update PostgreSQL entry for the disconnected user status
-          await DBParticipant.update(
-            { status: 'DISCONNECTED' },
-            { where: { roomId, userId: user.id } }
-          );
-
-          logger.info(`"socketHandlers.js","disconnect","User ${user.username} left room ${roomId}"`);
-
-          // Broadcast updated participant list
-          socket.to(roomId).emit('participants_updated', {
-            participants: Array.from(room.participants.values())
-          });
-
-          syncChangeRequests(room);
+        if (reason === INTENTIONAL_LEAVE) {
+          remove();
+          continue;
         }
-      } catch (error) {
-        logger.error(`"socketHandlers.js","disconnecting","Error: ${error.message}"`);
+
+        // Connection lost: keep their place and role while they have time to reconnect.
+        setTimeout(() => {
+          if (isCurrentConnection()) remove();
+        }, RECONNECT_GRACE_MS).unref();
       }
     });
   });

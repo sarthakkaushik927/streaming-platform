@@ -45,6 +45,10 @@ class SocketService {
     return this.socket;
   }
 
+  isConnected(): boolean {
+    return Boolean(this.socket?.connected);
+  }
+
   disconnect(): void {
     if (this.socket) {
       console.log('[Socket] Disconnecting...');

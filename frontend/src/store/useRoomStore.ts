@@ -244,12 +244,22 @@ export const useRoomStore = create<RoomState>((set, get) => {
     }));
   };
 
+  // The room this client should be in. A new connection isn't in any room until it joins,
+  // so this is joined again on every connect, including automatic reconnects.
+  let activeRoomId: string | null = null;
+
+  const handleConnect = () => {
+    if (activeRoomId) socketService.emit('join_room', { roomId: activeRoomId });
+  };
+
   const connectAndJoinSocketRoom = (roomId: string) => {
+    activeRoomId = roomId;
     socketService.connect();
-    socketService.emit('join_room', { roomId });
+    if (socketService.isConnected()) handleConnect();
   };
 
   // Attach listeners
+  socketService.on('connect', handleConnect);
   socketService.on('sync_state', handleSyncState);
   socketService.on('user_joined', handleUserJoined);
   socketService.on('user_left', handleUserLeft);
@@ -363,6 +373,7 @@ set({ room: null, participants: [], messages: [], selfId: null, reactions: [] })
     },
 
     leaveRoom: () => {
+      activeRoomId = null;
       const currentRoom = get().room;
       if (currentRoom) {
         socketService.emit('leave_room', { roomId: currentRoom.id });
