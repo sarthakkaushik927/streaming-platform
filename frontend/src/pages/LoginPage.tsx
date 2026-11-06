@@ -4,7 +4,8 @@ import { GlassCard } from '../components/shared/GlassCard';
 import { Input } from '../components/shared/Input';
 import { Button } from '../components/shared/Button';
 import { useAuth } from '../hooks/useAuth';
-import { useToast } from '../components/shared/Toast';
+import { useToast } from '../hooks/useToast';
+import { getErrorMessage } from '../utils/error';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -28,8 +29,8 @@ export const LoginPage: React.FC = () => {
       await login({ emailAddress: email, password });
       showToast('Welcome back!', 'success');
       navigate(`${redirectTo?.pathname || '/dashboard'}${redirectTo?.search || ''}`, { replace: true });
-    } catch (err: any) {
-      showToast(err?.message || 'Invalid credentials', 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Invalid credentials'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -37,10 +38,10 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-frame p-2 md:p-4 flex flex-col font-body-md">
-      <div className="flex-1 bg-background text-on-surface rounded-[32px] overflow-hidden relative flex flex-col justify-center items-center shadow-2xl">
+      <div className="flex-1 bg-background text-on-surface rounded-4xl overflow-hidden relative flex flex-col justify-center items-center shadow-2xl">
       <div className="fixed inset-0 dot-grid opacity-30 pointer-events-none" />
       
-      <main className="relative z-10 w-full max-w-[480px] px-6">
+      <main className="relative z-10 w-full max-w-120 px-6">
         <div className="text-center mb-10">
           <Link to="/" className="inline-flex items-center gap-2.5 mb-3">
             <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold text-lg">V</span>

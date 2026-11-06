@@ -1,4 +1,4 @@
-import { LoginPayload, RegisterPayload, AuthResponse, RawAuthResponse, User } from '../types/user';
+import { LoginPayload, RegisterPayload, AuthResponse, RawAuthResponse, RawMeResponse, User } from '../types/user';
 import { apiClient } from './api.client';
 import { setCookie, getCookie, deleteCookie } from '../utils/cookie';
 
@@ -42,13 +42,13 @@ class AuthService {
     if (!token) return null;
 
     try {
-      const res: any = await apiClient.get<User>('/auth/me');
+      const res = await apiClient.get<RawMeResponse>('/auth/me');
       if (res) {
         const resolvedUser = res.user || res.data?.user || res.data || res;
         if (!resolvedUser.id && resolvedUser._id) {
           resolvedUser.id = resolvedUser._id;
         }
-        return resolvedUser;
+        return resolvedUser as User;
       }
     } catch (err) {
       console.warn('Backend /auth/me call failed:', err);

@@ -116,7 +116,7 @@ export const ChatBot: React.FC = () => {
 
       {isOpen && (
         <div
-          className="fixed bottom-0 right-0 md:bottom-24 md:right-6 z-[60] w-full h-[100dvh] md:w-[360px] md:h-[520px] rounded-none md:rounded-3xl border-0 md:border overflow-hidden shadow-2xl flex flex-col transition-all animate-in fade-in slide-in-from-bottom-10"
+          className="fixed bottom-0 right-0 md:bottom-24 md:right-6 z-60 w-full h-dvh md:w-90 md:h-130 rounded-none md:rounded-3xl border-0 md:border overflow-hidden shadow-2xl flex flex-col transition-all animate-in fade-in slide-in-from-bottom-10"
           style={{
             background: 'var(--surface)',
             borderColor: 'var(--outline)',
@@ -180,7 +180,7 @@ export const ChatBot: React.FC = () => {
                 >
                   <Bot className="w-6 h-6" />
                 </div>
-                <p className="font-body-md text-sm text-center max-w-[200px]" style={{ color: 'var(--on-surface-variant)' }}>
+                <p className="font-body-md text-sm text-center max-w-50" style={{ color: 'var(--on-surface-variant)' }}>
                   Ask me anything about SyncStream or the team
                 </p>
               </div>

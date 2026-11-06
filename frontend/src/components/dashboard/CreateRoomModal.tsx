@@ -4,7 +4,8 @@ import { Modal } from '../shared/Modal';
 import { Input } from '../shared/Input';
 import { Button } from '../shared/Button';
 import { roomService } from '../../services/room.service';
-import { useToast } from '../shared/Toast';
+import { useToast } from '../../hooks/useToast';
+import { getErrorMessage } from '../../utils/error';
 
 interface CreateRoomModalProps {
   isOpen: boolean;
@@ -31,14 +32,14 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClos
         isPrivate 
       });
       
-      const targetId = room.id || (room as any)._id || (room as any).roomId || 'ROOM-7721';
+      const targetId = room.id || 'ROOM-7721';
 
       showToast(`Watch Room "${name}" created!`, 'success');
       onClose();
       setName('');
       navigate(`/room/${targetId}`);
-    } catch (err: any) {
-      showToast(err?.message || 'Failed to create room', 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to create room'), 'error');
     } finally {
       setIsLoading(false);
     }

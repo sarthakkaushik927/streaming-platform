@@ -2,13 +2,40 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useThemeStore } from '../store/useThemeStore';
-import { Sun, Moon, ChevronRight, Play, Pause, MessageSquare, Users, Sparkles, Volume2 } from 'lucide-react';
+import { Sun, Moon, ChevronRight, Play, Pause, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Footer } from '../components/shared/Footer';
 
 const InvertedCorner = ({ className }: { className: string }) => (
   <div className={`absolute w-8 h-8 bg-transparent pointer-events-none ${className}`} />
 );
+
+const demoSlides = [
+  {
+    title: "Cyberpunk 2077 — Official 4K Cinematic Trailer",
+    channel: "CD PROJEKT RED",
+    image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop",
+    tag: "4K SYNCHRONIZED"
+  },
+  {
+    title: "Interstellar — Space Odyssey Watch Party",
+    channel: "Warner Bros. Pictures",
+    image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800&auto=format&fit=crop",
+    tag: "FRAME-PERFECT"
+  },
+  {
+    title: "Lofi Hip Hop Radio — 24/7 Chill Beats",
+    channel: "Lofi Girl",
+    image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
+    tag: "LIVE AUDIO ROOM"
+  }
+];
+
+const demoChats = [
+  { name: "Alex", text: "Frame-perfect sync is insane! 🔥", role: "HOST" },
+  { name: "Sarah", text: "Ready for movie night! 🍿", role: "MOD" },
+  { name: "David", text: "Zero lag audio sync 🚀", role: "VIEWER" },
+];
 
 export const LandingPage: React.FC = () => {
   const { user } = useAuth();
@@ -18,27 +45,6 @@ export const LandingPage: React.FC = () => {
   const [isPlayingDemo, setIsPlayingDemo] = useState(true);
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
 
-  const demoSlides = [
-    {
-      title: "Cyberpunk 2077 — Official 4K Cinematic Trailer",
-      channel: "CD PROJEKT RED",
-      image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop",
-      tag: "4K SYNCHRONIZED"
-    },
-    {
-      title: "Interstellar — Space Odyssey Watch Party",
-      channel: "Warner Bros. Pictures",
-      image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800&auto=format&fit=crop",
-      tag: "FRAME-PERFECT"
-    },
-    {
-      title: "Lofi Hip Hop Radio — 24/7 Chill Beats",
-      channel: "Lofi Girl",
-      image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
-      tag: "LIVE AUDIO ROOM"
-    }
-  ];
-
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   useEffect(() => {
@@ -47,12 +53,6 @@ export const LandingPage: React.FC = () => {
     }, 4500);
     return () => clearInterval(slideInterval);
   }, []);
-
-  const demoChats = [
-    { name: "Alex", text: "Frame-perfect sync is insane! 🔥", role: "HOST" },
-    { name: "Sarah", text: "Ready for movie night! 🍿", role: "MOD" },
-    { name: "David", text: "Zero lag audio sync 🚀", role: "VIEWER" },
-  ];
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -64,7 +64,7 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-frame p-2 md:p-4 flex flex-col font-body-md">
       {/* Main Cream Panel */}
-      <div className="relative flex-1 bg-background rounded-[32px] overflow-hidden flex flex-col min-h-[90vh]">
+      <div className="relative flex-1 bg-background rounded-4xl overflow-hidden flex flex-col min-h-[90vh]">
         
         {/* Mobile Header (clean full width bar) */}
         <div className="md:hidden flex items-center justify-between p-4 bg-frame text-cream-on-frame z-20">
@@ -95,17 +95,17 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Desktop CUTOUT: TOP LEFT (Logo) */}
-        <div className="hidden md:block absolute top-0 left-0 bg-frame rounded-br-[32px] p-6 pr-10 pb-8 z-20">
+        <div className="hidden md:block absolute top-0 left-0 bg-frame rounded-br-4xl p-6 pr-10 pb-8 z-20">
           <Link to="/" className="text-cream-on-frame font-display-lg text-2xl flex items-center gap-2">
             <span className="w-7 h-7 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-xs shadow-sm">V</span>
             SYNCSTREAM
           </Link>
-          <InvertedCorner className="top-0 -right-8 rounded-tl-[32px] shadow-[-16px_-16px_0_16px_var(--frame)]" />
-          <InvertedCorner className="-bottom-8 left-0 rounded-tl-[32px] shadow-[-16px_-16px_0_16px_var(--frame)]" />
+          <InvertedCorner className="top-0 -right-8 rounded-tl-4xl shadow-[-16px_-16px_0_16px_var(--frame)]" />
+          <InvertedCorner className="-bottom-8 left-0 rounded-tl-4xl shadow-[-16px_-16px_0_16px_var(--frame)]" />
         </div>
 
         {/* Desktop CUTOUT: TOP RIGHT (Theme & Auth) */}
-        <div className="hidden md:flex absolute top-0 right-0 bg-frame rounded-bl-[32px] p-6 pl-10 pb-8 z-20 items-center gap-3">
+        <div className="hidden md:flex absolute top-0 right-0 bg-frame rounded-bl-4xl p-6 pl-10 pb-8 z-20 items-center gap-3">
           <button
             onClick={toggleTheme}
             className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 text-cream-on-frame hover:bg-white/10 transition-colors font-label-mono text-xs"
@@ -126,12 +126,12 @@ export const LandingPage: React.FC = () => {
               Let's Connect
             </Link>
           )}
-          <InvertedCorner className="top-0 -left-8 rounded-tr-[32px] shadow-[16px_-16px_0_16px_var(--frame)]" />
-          <InvertedCorner className="-bottom-8 right-0 rounded-tr-[32px] shadow-[16px_-16px_0_16px_var(--frame)]" />
+          <InvertedCorner className="top-0 -left-8 rounded-tr-4xl shadow-[16px_-16px_0_16px_var(--frame)]" />
+          <InvertedCorner className="-bottom-8 right-0 rounded-tr-4xl shadow-[16px_-16px_0_16px_var(--frame)]" />
         </div>
 
         {/* CUTOUT: BOTTOM RIGHT (Crazy Mode Toggle) */}
-        <div className="hidden md:flex absolute bottom-0 right-0 bg-frame rounded-tl-[32px] p-5 md:p-6 pl-8 md:pl-10 pt-6 md:pt-8 z-20 items-center gap-3">
+        <div className="hidden md:flex absolute bottom-0 right-0 bg-frame rounded-tl-4xl p-5 md:p-6 pl-8 md:pl-10 pt-6 md:pt-8 z-20 items-center gap-3">
           <span className="text-cream-on-frame/70 font-label-mono text-xs">Crazy mode:</span>
           <div className="flex bg-white/10 rounded-full p-1 gap-1 border border-white/20">
             <button
@@ -147,8 +147,8 @@ export const LandingPage: React.FC = () => {
               Off
             </button>
           </div>
-          <InvertedCorner className="bottom-0 -left-8 rounded-br-[32px] shadow-[16px_16px_0_16px_var(--frame)]" />
-          <InvertedCorner className="-top-8 right-0 rounded-br-[32px] shadow-[16px_16px_0_16px_var(--frame)]" />
+          <InvertedCorner className="bottom-0 -left-8 rounded-br-4xl shadow-[16px_16px_0_16px_var(--frame)]" />
+          <InvertedCorner className="-top-8 right-0 rounded-br-4xl shadow-[16px_16px_0_16px_var(--frame)]" />
         </div>
 
         {/* --- INNER CONTENT --- */}
@@ -160,7 +160,7 @@ export const LandingPage: React.FC = () => {
                 to="/dashboard"
                 className="px-10 py-2.5 rounded-full bg-frame text-cream-on-frame font-label-mono text-sm font-bold shadow-md hover:shadow-lg hover:shadow-primary/10 transition-all hover:-translate-y-0.5 flex items-center gap-2 relative overflow-hidden group"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
+                <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
                 Enter the Platform
               </Link>
@@ -199,7 +199,7 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Animated Interactive 3D Video Demo Card */}
-        <div className="relative mt-4 mb-16 md:mt-0 md:mb-0 px-6 md:px-0 md:absolute md:top-1/2 md:-translate-y-1/2 md:right-[3%] lg:right-[8%] w-full md:w-[360px] lg:w-[480px] z-20 pointer-events-auto">
+        <div className="relative mt-4 mb-16 md:mt-0 md:mb-0 px-6 md:px-0 md:absolute md:top-1/2 md:-translate-y-1/2 md:right-[3%] lg:right-[8%] w-full md:w-90 lg:w-120 z-20 pointer-events-auto">
           <motion.div
             initial={{ y: 0, rotate: -3 }}
             animate={{
@@ -208,7 +208,7 @@ export const LandingPage: React.FC = () => {
             }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
             whileHover={{ scale: 1.03, rotate: 0 }}
-            className="relative bg-frame border-2 border-white/20 rounded-[32px] p-4 lg:p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] cursor-pointer group"
+            className="relative bg-frame border-2 border-white/20 rounded-4xl p-4 lg:p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] cursor-pointer group"
             onClick={() => setIsPlayingDemo(!isPlayingDemo)}
           >
             {/* Ambient Glow */}
@@ -231,7 +231,7 @@ export const LandingPage: React.FC = () => {
               </AnimatePresence>
 
               {/* Gradient Dark Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/60 pointer-events-none" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-black/60 pointer-events-none" />
 
               {/* Center Play Button Overlay */}
               <div className="absolute inset-0 flex items-center justify-center z-10">

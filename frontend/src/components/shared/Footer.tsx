@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 export const Footer: React.FC = () => {
   return (
     <footer className="w-full pb-6 px-4 md:px-6 mt-10">
-      <div className="bg-frame text-cream-on-frame rounded-[32px] overflow-hidden border border-white/10 shadow-xl relative">
+      <div className="bg-frame text-cream-on-frame rounded-4xl overflow-hidden border border-white/10 shadow-xl relative">
         {/* Glow effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-primary/10 blur-[100px] pointer-events-none" />
 
@@ -13,7 +13,7 @@ export const Footer: React.FC = () => {
           <div className="max-w-sm">
             <Link to="/" className="text-cream-on-frame font-display-lg text-2xl flex items-center gap-3 mb-6 hover:opacity-80 transition-opacity">
               <span className="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-sm shadow-[0_0_15px_var(--color-primary)]">V</span>
-              <span className="tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500">SYNCSTREAM</span>
+              <span className="tracking-tight text-transparent bg-clip-text bg-linear-to-r from-amber-400 via-orange-500 to-amber-500">SYNCSTREAM</span>
             </Link>
             <p className="font-label-mono text-sm text-cream-on-frame/50 leading-relaxed mb-8">
               Real-time cinematic synchronization for watch parties. Experience flawless frame-perfect playback with your friends.
@@ -50,7 +50,7 @@ export const Footer: React.FC = () => {
         {/* Giant wordmark */}
         <div className="px-4 pb-8 flex justify-center relative z-10 overflow-hidden">
           <h2
-            className="font-display-lg font-[900] tracking-[-0.04em] select-none leading-none text-center bg-clip-text text-transparent bg-gradient-to-r from-amber-400/30 via-orange-500/30 to-amber-500/30 animate-shimmer-text"
+            className="font-display-lg font-black tracking-[-0.04em] select-none leading-none text-center bg-clip-text text-transparent bg-linear-to-r from-amber-400/30 via-orange-500/30 to-amber-500/30 animate-shimmer-text"
             style={{ fontSize: 'clamp(4.5rem, 20vw, 18rem)' }}
           >
             SYNCSTREAM

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '../hooks/useRoom';
-import { useAuth } from '../hooks/useAuth';
 import { Role } from '../types/participant';
 import { Navbar } from '../components/shared/Navbar';
 import { Button } from '../components/shared/Button';
@@ -13,8 +12,8 @@ import { SyncTelemetry } from '../components/room/SyncTelemetry';
 import { ChangeVideoModal } from '../components/room/ChangeVideoModal';
 import { RoleManagementModal } from '../components/room/RoleManagementModal';
 import { RoleBadge } from '../components/shared/RoleBadge';
-import { useParticipants } from '../hooks/useParticipants';
-import { useToast } from '../components/shared/Toast';
+import { useToast } from '../hooks/useToast';
+import { getErrorMessage } from '../utils/error';
 import { useRoomStore } from '../store/useRoomStore';
 import { FloatingReactions } from '../components/room/FloatingReactions';
 import { MessageSquare, X } from 'lucide-react';
@@ -22,10 +21,8 @@ import { MessageSquare, X } from 'lucide-react';
 export const RoomPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { room, joinRoom, leaveRoom, isLoading, participants, selfId } = useRoom();
   const { reactions, sendEmojiReaction, removeReaction } = useRoomStore();
-  const { assignRole } = useParticipants();
   const { showToast } = useToast();
   
   const [isChangeVideoOpen, setIsChangeVideoOpen] = useState(false);
@@ -42,9 +39,9 @@ export const RoomPage: React.FC = () => {
       };
     }
 
-    joinRoom(roomId).catch((err: any) => {
+    joinRoom(roomId).catch((err: unknown) => {
       if (!isActive) return;
-      showToast(err?.message || 'Unable to join this room', 'error');
+      showToast(getErrorMessage(err, 'Unable to join this room'), 'error');
       navigate('/dashboard', { replace: true });
     });
 
@@ -75,7 +72,7 @@ export const RoomPage: React.FC = () => {
       <div className="hidden lg:grid grid-cols-[auto_1fr_auto] items-center gap-4 sticky top-4 z-50 px-4 w-full mb-6">
         {/* Left Side: Room Info */}
         <div className="justify-self-start flex items-center gap-3 bg-surface/95 backdrop-blur-md border-2 border-black/20 dark:border-primary/50 px-5 py-2 rounded-full shadow-xl h-14">
-           <h1 className="font-headline-sm text-base text-on-surface font-bold truncate max-w-[140px] xl:max-w-[180px]" title={room.name}>{room.name}</h1>
+           <h1 className="font-headline-sm text-base text-on-surface font-bold truncate max-w-35 xl:max-w-45" title={room.name}>{room.name}</h1>
            <div className="h-4 w-px bg-outline-variant/50" />
            <RoleBadge role={currentUserRole} />
         </div>
@@ -112,9 +109,9 @@ export const RoomPage: React.FC = () => {
       </div>
       
       {/* Mobile/Tablet Room Toolbar */}
-      <div className="lg:hidden bg-surface-container border-b border-outline px-4 py-3 flex flex-wrap items-center justify-between gap-3 z-10 flex-shrink-0">
+      <div className="lg:hidden bg-surface-container border-b border-outline px-4 py-3 flex flex-wrap items-center justify-between gap-3 z-10 shrink-0">
         <div className="flex items-center gap-3">
-           <h1 className="font-headline-sm text-sm font-bold text-on-surface truncate max-w-[130px] sm:max-w-[200px]" title={room.name}>{room.name}</h1>
+           <h1 className="font-headline-sm text-sm font-bold text-on-surface truncate max-w-32.5 sm:max-w-50" title={room.name}>{room.name}</h1>
            <RoleBadge role={currentUserRole} />
         </div>
         
@@ -136,9 +133,9 @@ export const RoomPage: React.FC = () => {
       </div>
 
       {/* Main Room Layout */}
-      <div className="flex-1 flex flex-col lg:flex-row bg-background min-h-0 mx-2 lg:mx-4 mb-2 lg:mb-4 rounded-[24px] lg:rounded-[32px] overflow-hidden shadow-2xl relative border border-outline">
+      <div className="flex-1 flex flex-col lg:flex-row bg-background min-h-0 mx-2 lg:mx-4 mb-2 lg:mb-4 rounded-3xl lg:rounded-4xl overflow-hidden shadow-2xl relative border border-outline">
          {/* Video Area (left side) */}
-         <div className="w-full lg:flex-[3] flex flex-col p-3 md:p-4 lg:min-h-0 lg:overflow-y-auto custom-scrollbar relative">
+         <div className="w-full lg:flex-3 flex flex-col p-3 md:p-4 lg:min-h-0 lg:overflow-y-auto custom-scrollbar relative">
            <FloatingReactions reactions={reactions} onRemove={removeReaction} />
            <YouTubeWebsite
              onChangeVideoClick={() => setIsChangeVideoOpen(true)}
@@ -147,8 +144,8 @@ export const RoomPage: React.FC = () => {
          </div>
          
          {/* Sidebar (right side) */}
-         <div className="w-full lg:w-[380px] xl:w-[420px] border-t lg:border-t-0 lg:border-l border-outline bg-background flex flex-col p-4 md:p-6 gap-6 h-auto lg:h-full lg:min-h-0 overflow-hidden flex-shrink-0 relative">
-            <div className="h-[200px] lg:h-[30%] lg:min-h-[180px] lg:max-h-[250px] flex flex-col min-h-0 flex-shrink-0">
+         <div className="w-full lg:w-95 xl:w-105 border-t lg:border-t-0 lg:border-l border-outline bg-background flex flex-col p-4 md:p-6 gap-6 h-auto lg:h-full lg:min-h-0 overflow-hidden shrink-0 relative">
+            <div className="h-50 lg:h-[30%] lg:min-h-45 lg:max-h-62.5 flex flex-col min-h-0 shrink-0">
                <ParticipantList />
             </div>
             {/* Desktop Only Chat Panel */}
@@ -171,7 +168,7 @@ export const RoomPage: React.FC = () => {
       {/* Mobile Floating Chat Overlay Drawer */}
       {isMobileChatOpen && (
         <div className="fixed inset-x-4 top-20 bottom-20 z-50 lg:hidden rounded-[20px] shadow-2xl overflow-hidden border border-outline bg-surface/95 backdrop-blur-xl flex flex-col animate-in slide-in-from-bottom-5 duration-200">
-          <div className="p-3.5 border-b border-outline bg-surface-container/80 flex items-center justify-between flex-shrink-0">
+          <div className="p-3.5 border-b border-outline bg-surface-container/80 flex items-center justify-between shrink-0">
             <h3 className="font-headline-sm text-sm text-on-surface flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-primary" /> Live Room Chat
             </h3>

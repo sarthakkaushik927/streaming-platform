@@ -1,6 +1,5 @@
 import React from 'react';
 import { Navbar } from '../components/shared/Navbar';
-import { Footer } from '../components/shared/Footer';
 import { GlassCard } from '../components/shared/GlassCard';
 import { Button } from '../components/shared/Button';
 import { useAuth } from '../hooks/useAuth';
@@ -12,7 +11,7 @@ export const AccountPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-frame p-2 md:p-4 flex flex-col font-body-md">
-      <div className="flex-1 bg-background text-on-surface rounded-[32px] overflow-hidden flex flex-col shadow-2xl relative">
+      <div className="flex-1 bg-background text-on-surface rounded-4xl overflow-hidden flex flex-col shadow-2xl relative">
       <Navbar />
 
       <main className="flex-1 max-w-full px-6 lg:px-16 2xl:px-24 py-12 w-full">

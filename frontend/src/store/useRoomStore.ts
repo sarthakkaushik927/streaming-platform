@@ -1,8 +1,19 @@
 import { create } from 'zustand';
 import { Room } from '../types/room';
-import { Participant, Role } from '../types/participant';
+import { Participant, RawParticipant, Role } from '../types/participant';
 import { PlayerState } from '../types/player';
-import { ChatMessage } from '../types/chat';
+import { ChatMessage, RawChatMessage } from '../types/chat';
+import {
+  HostTransferredPayload,
+  ParticipantListPayload,
+  ParticipantRemovedPayload,
+  PlaybackPayload,
+  RawPlaybackState,
+  ReactionPayload,
+  RoleAssignedPayload,
+  UserJoinedFields,
+  UserLeftPayload,
+} from '../types/socket';
 import { socketService } from '../services/socket.service';
 import { roomService } from '../services/room.service';
 import { participantService } from '../services/participant.service';
@@ -10,15 +21,22 @@ import { authService } from '../services/auth.service';
 
 import { ReactionItem } from '../components/room/FloatingReactions';
 
-const normalizeParticipant = (p: any): Participant => ({
+const extractParticipants = (payload: ParticipantListPayload): RawParticipant[] | null => {
+  const list = Array.isArray(payload)
+    ? payload
+    : payload?.participants || payload?.users || payload?.activeList;
+  return Array.isArray(list) ? list : null;
+};
+
+const normalizeParticipant = (p: RawParticipant): Participant => ({
   userId: String(p?.userId || p?.id || p?._id || p?.socketId),
   username: p?.username || p?.name || p?.user?.username || 'User',
   role: p?.role || Role.PARTICIPANT,
   joinedAt: p?.joinedAt || p?.joined_at || new Date().toISOString(),
 });
 
-const normalizePlaybackState = (payload: any): Partial<PlayerState> => {
-  const source = payload?.playbackState || payload?.state || payload;
+const normalizePlaybackState = (payload: PlaybackPayload): Partial<PlayerState> => {
+  const source = (payload?.playbackState || payload?.state || payload) as RawPlaybackState;
   const isPlaying = source?.isPlaying;
   const state = typeof isPlaying === 'boolean'
     ? (isPlaying ? 'playing' : 'paused')
@@ -54,20 +72,24 @@ export const useRoomStore = create<RoomState>((set, get) => {
   // Socket event listeners can be initialized later or handled via a setup function
   // But since we need to attach them once, we can do it inside a custom hook or directly here
   
-  const handleSyncState = (payload: any) => {
+  const handleSyncState = (payload: PlaybackPayload) => {
     set((state) => ({ playerState: { ...state.playerState, ...normalizePlaybackState(payload) } }));
   };
   
-  const handleUserJoined = (payload: any) => {
+  const handleUserJoined = (payload: UserJoinedFields | RawParticipant[]) => {
+    if (Array.isArray(payload)) {
+      set({ participants: payload.map(normalizeParticipant) });
+      return;
+    }
+
     // Flow A: Emit user_joined (Playback State + active list)
     if (payload?.playbackState || payload?.state) {
       set((state) => ({ playerState: { ...state.playerState, ...normalizePlaybackState(payload) } }));
     }
-    
-    const rawList = payload?.participants || payload?.users || payload?.activeList || (Array.isArray(payload) ? payload : null);
-    if (rawList && Array.isArray(rawList)) {
-      const normalized = rawList.map(normalizeParticipant);
-      set({ participants: normalized });
+
+    const rawList = extractParticipants(payload);
+    if (rawList) {
+      set({ participants: rawList.map(normalizeParticipant) });
       return;
     }
     
@@ -92,15 +114,14 @@ export const useRoomStore = create<RoomState>((set, get) => {
     });
   };
 
-  const handleParticipantsUpdated = (payload: any) => {
-    const rawList = payload?.participants || payload?.users || payload?.activeList || (Array.isArray(payload) ? payload : null);
-    if (Array.isArray(rawList)) {
-      const normalized = rawList.map(normalizeParticipant);
-      set({ participants: normalized });
+  const handleParticipantsUpdated = (payload: ParticipantListPayload) => {
+    const rawList = extractParticipants(payload);
+    if (rawList) {
+      set({ participants: rawList.map(normalizeParticipant) });
     }
   };
 
-  const handleUserLeft = (payload: any) => {
+  const handleUserLeft = (payload: UserLeftPayload) => {
     const userId = payload?.userId || payload?.id;
     if (!userId) return;
     
@@ -115,7 +136,7 @@ export const useRoomStore = create<RoomState>((set, get) => {
     set((state) => ({ participants: state.participants.filter(p => String(p.userId) !== String(userId)) }));
   };
 
-  const handleRoleAssigned = (payload: any) => {
+  const handleRoleAssigned = (payload: RoleAssignedPayload) => {
     const userId = payload?.targetUserId || payload?.target || payload?.userId || payload?.id;
     const newRole = payload?.newRole || payload?.role;
     if (!userId || !newRole) return;
@@ -130,7 +151,7 @@ export const useRoomStore = create<RoomState>((set, get) => {
     }
   };
 
-  const handleParticipantRemoved = (payload: any) => {
+  const handleParticipantRemoved = (payload: ParticipantRemovedPayload) => {
     const userId = payload?.targetUserId || payload?.userId || payload?.id;
     if (payload?.participants && Array.isArray(payload.participants)) {
       const normalized = payload.participants.map(normalizeParticipant);
@@ -142,7 +163,7 @@ export const useRoomStore = create<RoomState>((set, get) => {
     }
   };
 
-  const handleChatMessage = (payload: any) => {
+  const handleChatMessage = (payload: RawChatMessage) => {
     if (!payload) return;
     const content = payload.message || payload.text || payload.content || '';
     const username = payload.user?.username || payload.username || 'User';
@@ -157,7 +178,7 @@ export const useRoomStore = create<RoomState>((set, get) => {
     set((state) => ({ messages: [...state.messages, msgObj] }));
   };
 
-  const handleReaction = (payload: any) => {
+  const handleReaction = (payload: ReactionPayload) => {
     if (!payload?.emoji || !payload?.username) return;
     const reactionItem: ReactionItem = {
       id: `react-${Date.now()}-${Math.random()}`,
@@ -172,11 +193,13 @@ export const useRoomStore = create<RoomState>((set, get) => {
     get().leaveRoom();
   };
 
-  const handleHostTransferred = (payload: any) => {
-    if (!payload?.newHostId || !Array.isArray(payload.participants)) return;
+  const handleHostTransferred = (payload: HostTransferredPayload) => {
+    const newHostId = payload?.newHostId;
+    const participants = payload?.participants;
+    if (!newHostId || !Array.isArray(participants)) return;
     set((state) => ({
-      participants: payload.participants.map(normalizeParticipant),
-      room: state.room ? { ...state.room, hostId: String(payload.newHostId) } : null,
+      participants: participants.map(normalizeParticipant),
+      room: state.room ? { ...state.room, hostId: String(newHostId) } : null,
     }));
   };
 

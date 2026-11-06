@@ -24,7 +24,7 @@ class ApiClient {
     } catch (networkErr: unknown) {
       const msg = networkErr instanceof Error ? networkErr.message : String(networkErr);
       console.error(`[CORS / Network Error] ${msg}`);
-      throw new Error(`Server network or CORS error (${url}). Please ensure backend CORS headers allow requests from http://localhost:5173.`);
+      throw new Error(`Server network or CORS error (${url}). Please ensure backend CORS headers allow requests from http://localhost:5173.`, { cause: networkErr });
     }
 
     if (!response.ok) {
@@ -33,7 +33,7 @@ class ApiClient {
         const errorData = await response.json();
         if (errorData.message) errorMessage = errorData.message;
         else if (errorData.error) errorMessage = errorData.error;
-      } catch (e) {
+      } catch {
         // failed to parse json error
       }
       console.error(`[HTTP Error] ${errorMessage}`);

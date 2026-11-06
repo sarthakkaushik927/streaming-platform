@@ -19,6 +19,18 @@ interface VideoRecommendation {
   videoId: string;
 }
 
+interface YouTubeSearchItem {
+  id: { videoId: string };
+  snippet: {
+    title: string;
+    channelTitle: string;
+    thumbnails?: {
+      medium?: { url: string };
+      default?: { url: string };
+    };
+  };
+}
+
 const REACTION_EMOJIS = ['🔥', '❤️', '👏', '🎉', '😮', '🚀'];
 
 interface YouTubeWebsiteProps {
@@ -57,7 +69,9 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
     try {
       if (isMuted) { playerRef.current.unMute(); setIsMuted(false); }
       else { playerRef.current.mute(); setIsMuted(true); }
-    } catch {}
+    } catch {
+      // The YouTube player throws if its iframe isn't ready; the button state stays as it was.
+    }
   };
 
   // ── react-youtube onReady: sync initial state ──
@@ -66,7 +80,9 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
     try {
       event.target.seekTo(playerState.currentTime, true);
       if (playerState.state === 'playing') event.target.playVideo();
-    } catch {}
+    } catch {
+      // The YouTube player throws if its iframe isn't ready; the next sync event corrects it.
+    }
   };
 
   // ── react-youtube onStateChange: host emits, viewer snaps back ──
@@ -105,7 +121,9 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
     try {
       const diff = Math.abs(playerRef.current.getCurrentTime() - playerState.currentTime);
       if (diff > 2) playerRef.current.seekTo(playerState.currentTime, true);
-    } catch {}
+    } catch {
+      // The YouTube player throws if its iframe isn't ready; the next sync event corrects it.
+    }
   }, [playerState.state, playerState.currentTime, playerState.videoId, activeVideoId]);
 
   // ── Manual controls ──
@@ -150,7 +168,7 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
       );
       const data = await res.json();
       if (data.items) {
-        setSearchResults(data.items.map((item: any) => ({
+        setSearchResults(data.items.map((item: YouTubeSearchItem) => ({
           id: item.id.videoId,
           title: item.snippet.title,
           channel: item.snippet.channelTitle,
@@ -179,11 +197,11 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
     <div className="w-full flex flex-col lg:flex-row gap-4 items-stretch">
 
       {/* ── LEFT BOX: Video + Controls ── */}
-      <div ref={videoContainerRef} className="flex-1 min-w-0 flex flex-col rounded-[24px] overflow-hidden bg-room-card-bg shadow-xl dark:p-[3px] border border-outline">
+      <div ref={videoContainerRef} className="flex-1 min-w-0 flex flex-col rounded-3xl overflow-hidden bg-room-card-bg shadow-xl dark:p-0.75 border border-outline">
         <div className="flex-1 min-w-0 flex flex-col dark:bg-black dark:rounded-[21px] overflow-hidden">
 
         {/* Video player */}
-        <div className="relative w-full aspect-video bg-black flex-1 min-h-[300px]">
+        <div className="relative w-full aspect-video bg-black flex-1 min-h-75">
 
           {/* Viewer overlay — blocks timeline scrubbing */}
           {!canControl && (
@@ -249,7 +267,7 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
 
         {/* Reactions row */}
         {onSendReaction && (
-          <div className="px-4 py-2.5 flex items-center gap-3 bg-surface dark:bg-black border-t border-outline dark:border-white/10 relative overflow-hidden flex-shrink-0">
+          <div className="px-4 py-2.5 flex items-center gap-3 bg-surface dark:bg-black border-t border-outline dark:border-white/10 relative overflow-hidden shrink-0">
             <div className="flex items-center gap-1.5 text-on-surface-variant relative z-10">
               <Smile className="w-4 h-4 text-primary" />
               <span className="font-label-caps text-[10px] font-bold text-primary uppercase tracking-widest">React</span>
@@ -268,17 +286,17 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
       </div>
 
       {/* ── RIGHT BOX: YouTube Search ── */}
-      <div className="w-full lg:w-[340px] xl:w-[360px] flex-shrink-0 flex flex-col border border-outline rounded-[24px] overflow-hidden bg-room-card-bg text-room-card-text shadow-md dark:p-[3px] h-[580px]">
+      <div className="w-full lg:w-85 xl:w-90 shrink-0 flex flex-col border border-outline rounded-3xl overflow-hidden bg-room-card-bg text-room-card-text shadow-md dark:p-0.75 h-145">
         <div className="flex flex-col h-full dark:bg-black dark:rounded-[21px] overflow-hidden">
 
         {/* Panel header */}
-        <div className="px-4 py-3 border-b border-black/10 dark:border-white/10 flex items-center gap-2 flex-shrink-0 dark:text-white">
+        <div className="px-4 py-3 border-b border-black/10 dark:border-white/10 flex items-center gap-2 shrink-0 dark:text-white">
           <Clapperboard className="w-4 h-4" />
           <span className="font-label-caps text-xs uppercase tracking-wider font-bold">Video Search</span>
         </div>
 
         {/* Search input */}
-        <div className="px-3 py-3 flex-shrink-0 border-b border-black/10 dark:border-white/10">
+        <div className="px-3 py-3 shrink-0 border-b border-black/10 dark:border-white/10">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50 dark:opacity-100 dark:text-white/50" />
             <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -310,7 +328,7 @@ export const YouTubeWebsite: React.FC<YouTubeWebsiteProps> = ({ onChangeVideoCli
           {!searching && searchResults && searchResults.length > 0 && searchResults.map(item => (
             <div key={item.id} onClick={() => handleVideoSelect(item.videoId)}
               className="flex gap-3 p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 border border-transparent dark:border-white/5 transition-all cursor-pointer group dark:text-white h-20">
-              <div className="w-24 aspect-video bg-black/10 dark:bg-white/5 rounded-lg overflow-hidden flex-shrink-0 relative">
+              <div className="w-24 aspect-video bg-black/10 dark:bg-white/5 rounded-lg overflow-hidden shrink-0 relative">
                 <img src={item.thumbnail} alt="thumbnail" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

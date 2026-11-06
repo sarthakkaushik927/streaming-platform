@@ -8,7 +8,7 @@ export const extractYouTubeVideoId = (input: string): string => {
   }
 
   // Handle standard youtube.com/watch?v=ID
-  const watchMatch = trimmed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+  const watchMatch = trimmed.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
   if (watchMatch && watchMatch[1]) {
     return watchMatch[1];
   }

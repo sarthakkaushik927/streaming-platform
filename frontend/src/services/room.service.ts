@@ -1,5 +1,5 @@
-import { Room, RoomCreatePayload, RoomJoinPayload, RawRoomResponse, RoomLogEntry } from '../types/room';
-import { ChatMessage } from '../types/chat';
+import { Room, RoomCreatePayload, RoomJoinPayload, RawList, RawRoomLogEntry, RawRoomResponse, RoomLogEntry } from '../types/room';
+import { ChatMessage, RawChatMessage } from '../types/chat';
 import { apiClient } from './api.client';
 import { authService } from './auth.service';
 
@@ -17,8 +17,8 @@ class RoomService {
     },
   };
 
-  private parseRoomObj(raw: any): Room {
-    const data = raw?.data || raw;
+  private parseRoomObj(raw: RawRoomResponse): Room {
+    const data = (raw?.data || raw) as RawRoomResponse;
     const fallbackId = `ROOM-${Math.floor(Math.random() * 1000)}`;
     const id = data?.id || data?._id || data?.roomId || fallbackId;
     const title = data?.title || data?.name || 'Watch Party';
@@ -26,7 +26,7 @@ class RoomService {
     const rawHost = data?.hostId || data?.host_id || data?.host || data?.owner;
     let hostId = 'u1';
     if (typeof rawHost === 'object' && rawHost !== null) {
-      hostId = (rawHost as any).id || (rawHost as any)._id || (rawHost as any).username || 'u1';
+      hostId = rawHost.id || rawHost._id || rawHost.username || 'u1';
     } else if (rawHost) {
       hostId = String(rawHost);
     }
@@ -91,10 +91,10 @@ class RoomService {
 
   async listAllRooms(): Promise<Room[]> {
     try {
-      const res: any = await apiClient.get('/rooms');
+      const res = await apiClient.get<RawList<RawRoomResponse>>('/rooms');
       const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
       if (list.length > 0) {
-        return list.map((item: RawRoomResponse) => this.parseRoomObj(item));
+        return list.map((item) => this.parseRoomObj(item));
       }
       return Object.values(this.mockRooms);
     } catch (err) {
@@ -120,9 +120,9 @@ class RoomService {
   async getRoomChatHistory(roomId: string): Promise<ChatMessage[]> {
     if (!roomId || roomId === 'undefined') return [];
     try {
-      const res: any = await apiClient.get(`/rooms/${roomId}/chat`);
-      const list = res?.data || (Array.isArray(res) ? res : []);
-      return list.map((item: any) => ({
+      const res = await apiClient.get<RawList<RawChatMessage>>(`/rooms/${roomId}/chat`);
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      return list.map((item) => ({
         id: String(item.id || item._id || `msg-${Date.now()}`),
         userId: String(item.userId || item.user?.id || 'sys'),
         username: item.user?.username || item.username || 'User',
@@ -138,9 +138,9 @@ class RoomService {
   async getRoomPlaybackLogs(roomId: string): Promise<RoomLogEntry[]> {
     if (!roomId || roomId === 'undefined') return [];
     try {
-      const res: any = await apiClient.get(`/rooms/${roomId}/logs`);
-      const list = res?.data || (Array.isArray(res) ? res : []);
-      return list.map((item: any) => ({
+      const res = await apiClient.get<RawList<RawRoomLogEntry>>(`/rooms/${roomId}/logs`);
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      return list.map((item) => ({
         id: String(item.id || item._id || `log-${Date.now()}`),
         action: item.action || 'PLAY',
         videoId: item.videoId || '',

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useThemeStore } from '../../store/useThemeStore';
-import { Button } from './Button';
 import { Sun, Moon, Menu, LogOut, LogIn, UserPlus, X } from 'lucide-react';
 
 interface NavbarProps {
@@ -88,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
         </Link>
 
         {/* Center pill with nav links */}
-        <div className="hidden md:flex items-center bg-[var(--cream-on-frame)] rounded-full px-1.5 py-1 border-2 border-black/20 dark:border-primary/40 shadow-md">
+        <div className="hidden md:flex items-center bg-(--cream-on-frame) rounded-full px-1.5 py-1 border-2 border-black/20 dark:border-primary/40 shadow-md">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.path;
             return (
@@ -97,8 +96,8 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
                 to={link.path}
                 className={`px-4 py-1.5 rounded-full font-label-mono text-[11px] transition-all duration-200 ${
                   isActive
-                    ? 'bg-[var(--frame)] text-[var(--cream-on-frame)] font-bold'
-                    : 'text-[var(--frame)]/70 hover:text-[var(--frame)] font-medium'
+                    ? 'bg-(--frame) text-(--cream-on-frame) font-bold'
+                    : 'text-(--frame)/70 hover:text-(--frame) font-medium'
                 }`}
               >
                 {link.name}
@@ -150,7 +149,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
 
         {/* Mobile Menu for onDark */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 mt-2 mx-4 bg-[var(--frame)] border border-white/10 rounded-2xl p-4 flex flex-col gap-2 shadow-2xl z-50">
+          <div className="md:hidden absolute top-full left-0 right-0 mt-2 mx-4 bg-(--frame) border border-white/10 rounded-2xl p-4 flex flex-col gap-2 shadow-2xl z-50">
             {navLinks.map((link) => (
               <Link 
                 key={link.path}

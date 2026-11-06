@@ -19,7 +19,7 @@ export const ChatPanel: React.FC = () => {
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && user) {
-      sendMessage(input.trim(), user.id, user.username);
+      sendMessage(input.trim());
       setInput('');
     }
   };
@@ -31,10 +31,10 @@ export const ChatPanel: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-room-card-bg text-room-card-text rounded-[24px] shadow-[0_0_15px_rgba(var(--color-primary),0.15)] overflow-hidden relative border border-outline dark:p-[3px]">
+    <div className="flex flex-col h-full min-h-0 bg-room-card-bg text-room-card-text rounded-3xl shadow-[0_0_15px_rgba(var(--color-primary),0.15)] overflow-hidden relative border border-outline dark:p-0.75">
       <div className="flex flex-col h-full min-h-0 dark:bg-black dark:rounded-[21px] overflow-hidden">
         {/* Header */}
-        <div className="p-4 border-b border-black/10 dark:border-white/10 dark:text-white flex justify-between items-center flex-shrink-0">
+        <div className="p-4 border-b border-black/10 dark:border-white/10 dark:text-white flex justify-between items-center shrink-0">
           <h3 className="font-headline-sm text-sm font-bold">Room Chat</h3>
           <span className="font-label-mono text-[10px] text-green-700 dark:text-green-400 bg-green-500/20 dark:bg-green-500/10 border border-green-500/30 dark:border-green-500/20 px-2 py-0.5 rounded-full font-bold">LIVE</span>
         </div>
@@ -72,7 +72,7 @@ export const ChatPanel: React.FC = () => {
                     ? 'bg-black border-2 border-black text-white dark:bg-primary dark:border-primary dark:text-black font-medium rounded-tr-xs' 
                     : 'bg-black/5 border-2 border-black/20 text-room-card-text dark:bg-white/10 dark:border-white/20 dark:text-white rounded-tl-xs'
                 }`}>
-                  <p className="font-body-md text-[13px] leading-relaxed break-words">{msg.content}</p>
+                  <p className="font-body-md text-[13px] leading-relaxed wrap-break-word">{msg.content}</p>
                 </div>
               </div>
             );
@@ -80,7 +80,7 @@ export const ChatPanel: React.FC = () => {
           <div ref={messagesEndRef} />
         </div>
         
-        <div className="p-3 border-t border-black/10 dark:border-white/10 flex-shrink-0">
+        <div className="p-3 border-t border-black/10 dark:border-white/10 shrink-0">
           <form onSubmit={handleSend} className="relative">
             <input
               type="text"

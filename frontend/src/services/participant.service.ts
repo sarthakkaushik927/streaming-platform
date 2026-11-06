@@ -1,21 +1,22 @@
-import { Participant, RoleAssignPayload, ParticipantRemovePayload } from '../types/participant';
+import { Participant, Role, RoleAssignPayload, ParticipantRemovePayload } from '../types/participant';
+import { RawRoomResponse } from '../types/room';
 import { apiClient } from './api.client';
 
 class ParticipantService {
   async getParticipants(roomId: string): Promise<Participant[]> {
     try {
-      const res: any = await apiClient.get(`/rooms/${roomId}`);
-      const room = res?.data || res?.room || res;
+      const res = await apiClient.get<RawRoomResponse>(`/rooms/${roomId}`);
+      const room = (res?.data || res?.room || res) as RawRoomResponse;
       const list = room?.participants || room?.Participants || room?.users || [];
       if (Array.isArray(list) && list.length > 0) {
-        return list.map((item: any) => ({
+        return list.map((item) => ({
           userId: String(item.userId || item.id || item.user?.id || item._id),
           username: item.username || item.user?.username || 'User',
-          role: item.role || item.participants?.role || 'PARTICIPANT',
+          role: item.role || item.participants?.role || Role.PARTICIPANT,
           joinedAt: item.joinedAt || item.joined_at || new Date().toISOString(),
         }));
       }
-    } catch (e) {
+    } catch {
       // Socket events will populate active participants after join_room.
     }
     return [];

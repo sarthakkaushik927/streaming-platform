@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { useParticipants } from '../../hooks/useParticipants';
-import { useAuth } from '../../hooks/useAuth';
 import { Role } from '../../types/participant';
 import { RoleBadge } from '../shared/RoleBadge';
 
@@ -8,7 +6,6 @@ import { useRoom } from '../../hooks/useRoom';
 
 export const ParticipantList: React.FC = () => {
   const { participants, assignRole, selfId } = useRoom();
-  const { user } = useAuth();
   
   // Sort: Host first, then Mods, then Participants, then Viewers
   const roleWeight = {
@@ -27,9 +24,9 @@ export const ParticipantList: React.FC = () => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-room-card-bg text-room-card-text rounded-[24px] shadow-[0_0_15px_rgba(var(--color-primary),0.15)] overflow-hidden border border-outline dark:p-[3px]">
+    <div className="flex flex-col h-full min-h-0 bg-room-card-bg text-room-card-text rounded-3xl shadow-[0_0_15px_rgba(var(--color-primary),0.15)] overflow-hidden border border-outline dark:p-0.75">
       <div className="flex flex-col h-full min-h-0 dark:bg-black dark:rounded-[21px] overflow-hidden">
-        <div className="p-4 border-b border-black/10 dark:border-white/10 dark:text-white flex justify-between items-center flex-shrink-0">
+        <div className="p-4 border-b border-black/10 dark:border-white/10 dark:text-white flex justify-between items-center shrink-0">
           <h3 className="font-headline-sm text-sm font-bold">Participants</h3>
           <span className="bg-primary/20 text-primary border border-primary/30 text-xs font-bold px-2.5 py-0.5 rounded-full font-label-mono">
             {participants.length}

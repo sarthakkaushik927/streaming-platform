@@ -53,21 +53,23 @@ class SocketService {
     }
   }
 
-  on(event: string, handler: EventHandler): void {
+  on<Args extends unknown[]>(event: string, handler: (...args: Args) => void): void {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
-    this.listeners[event].push(handler);
+    const registered = handler as EventHandler;
+    this.listeners[event].push(registered);
     if (this.socket) {
-      this.socket.on(event, handler);
+      this.socket.on(event, registered);
     }
   }
 
-  off(event: string, handler: EventHandler): void {
+  off<Args extends unknown[]>(event: string, handler: (...args: Args) => void): void {
     if (!this.listeners[event]) return;
-    this.listeners[event] = this.listeners[event].filter(h => h !== handler);
+    const registered = handler as EventHandler;
+    this.listeners[event] = this.listeners[event].filter(h => h !== registered);
     if (this.socket) {
-      this.socket.off(event, handler);
+      this.socket.off(event, registered);
     }
   }
 

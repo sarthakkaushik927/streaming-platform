@@ -6,6 +6,15 @@ export interface User {
   avatarUrl?: string;
 }
 
+export interface RawUser extends Partial<User> {
+  _id?: string;
+}
+
+export interface RawMeResponse extends RawUser {
+  user?: RawUser;
+  data?: RawUser & { user?: RawUser };
+}
+
 export interface AuthResponse {
   user: User;
   token: string;
