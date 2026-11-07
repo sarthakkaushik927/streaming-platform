@@ -6,6 +6,7 @@ const { schema } = require('./src/config/config.js');
 // Ensure all database models are loaded and registered
 require('./src/models/index.js');
 const registerSocketHandlers = require('./src/websockets/socketHandlers.js');
+const RedisBroadcaster = require('./src/websockets/RedisBroadcaster.js');
 const logger = require('./src/utilities/logger.js');
 
 const port = process.env.PORT || 5000;
@@ -16,13 +17,19 @@ async function startServer() {
     await sequelize.authenticate();
     logger.info('"server.js","startServer()","SyncStream Database connected successfully"');
     
-    // Create the app's own schema, then any missing tables inside it. Nothing outside it is changed.
-    await sequelize.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
-    await sequelize.sync({ alter: false });
+    // Several instances may start at once, so they take turns setting up tables: a transaction-scoped
+    // Postgres advisory lock lets one through at a time and releases itself when the transaction ends.
+    await sequelize.transaction(async (transaction) => {
+      await sequelize.query('SELECT pg_advisory_xact_lock(4207311)', { transaction });
 
-    // sync() doesn't add columns to existing tables, so add this one to rooms created before it existed.
-    await sequelize.query(`ALTER TABLE "${schema}"."rooms" ADD COLUMN IF NOT EXISTS "created_by" UUID`);
-    await sequelize.query(`UPDATE "${schema}"."rooms" SET "created_by" = "host_id" WHERE "created_by" IS NULL`);
+      // Create the app's own schema, then any missing tables inside it. Nothing outside it is changed.
+      await sequelize.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`, { transaction });
+      await sequelize.sync({ alter: false, transaction });
+
+      // sync() doesn't add columns to existing tables, so add this one to rooms created before it existed.
+      await sequelize.query(`ALTER TABLE "${schema}"."rooms" ADD COLUMN IF NOT EXISTS "created_by" UUID`, { transaction });
+      await sequelize.query(`UPDATE "${schema}"."rooms" SET "created_by" = "host_id" WHERE "created_by" IS NULL`, { transaction });
+    });
     logger.info('"server.js","startServer()","Database models synchronized"');
 
     const server = http.createServer(app);
@@ -45,8 +52,12 @@ async function startServer() {
       }
     });
 
+    // Share room broadcasts across server instances with Redis Pub/Sub when REDIS_URL is set.
+    const broadcaster = new RedisBroadcaster(io);
+    await broadcaster.start();
+
     // Bind real-time socket events
-    registerSocketHandlers(io);
+    registerSocketHandlers(io, broadcaster);
 
     // 3. Listen on port
     server.listen(port, () => {

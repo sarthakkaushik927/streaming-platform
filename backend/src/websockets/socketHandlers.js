@@ -50,7 +50,11 @@ const buildChangeRequest = ({ action, currentTime, videoId }, user) => {
   return null;
 };
 
-const registerSocketHandlers = (io) => {
+/*
+  broadcaster shares sync_state, chat and reactions across server instances (RedisBroadcaster).
+  Membership and role events stay on the instance that owns the room's live state.
+*/
+const registerSocketHandlers = (io, broadcaster) => {
   // Single path for every playback change, whether made directly or approved from a request.
   const applyPlaybackChange = async (room, actor, { action, currentTime, videoId }, audience) => {
     const live = room.getLiveState();
@@ -298,7 +302,7 @@ const registerSocketHandlers = (io) => {
         }
 
         const action = isPlaying ? PlaybackAction.PLAY : PlaybackAction.PAUSE;
-        await applyPlaybackChange(room, user, { action, currentTime, videoId }, socket.to(roomId));
+        await applyPlaybackChange(room, user, { action, currentTime, videoId }, broadcaster.toRoom(roomId, socket.id));
       } catch (error) {
         logger.error(`"socketHandlers.js","play_state_change","Error: ${error.message}"`);
       }
@@ -318,7 +322,7 @@ const registerSocketHandlers = (io) => {
           return;
         }
 
-        await applyPlaybackChange(room, user, { action: PlaybackAction.SEEK, currentTime, videoId }, socket.to(roomId));
+        await applyPlaybackChange(room, user, { action: PlaybackAction.SEEK, currentTime, videoId }, broadcaster.toRoom(roomId, socket.id));
       } catch (error) {
         logger.error(`"socketHandlers.js","seek","Error: ${error.message}"`);
       }
@@ -338,7 +342,7 @@ const registerSocketHandlers = (io) => {
           return;
         }
 
-        await applyPlaybackChange(room, user, { action: PlaybackAction.CHANGE_VIDEO, videoId }, io.to(roomId));
+        await applyPlaybackChange(room, user, { action: PlaybackAction.CHANGE_VIDEO, videoId }, broadcaster.toRoom(roomId));
       } catch (error) {
         logger.error(`"socketHandlers.js","change_video","Error: ${error.message}"`);
       }
@@ -395,7 +399,7 @@ const registerSocketHandlers = (io) => {
         syncChangeRequests(room);
 
         if (approved === true) {
-          await applyPlaybackChange(room, user, request, io.to(room.id));
+          await applyPlaybackChange(room, user, request, broadcaster.toRoom(room.id));
         }
 
         logger.info(`"socketHandlers.js","review_change","Room ${room.id}: ${user.username} ${approved === true ? 'approved' : 'declined'} ${request.action} from ${request.requesterName}"`);
@@ -618,7 +622,7 @@ const registerSocketHandlers = (io) => {
           username,
           roomId
         };
-        io.to(roomId).emit('reaction', reactionPayload);
+        broadcaster.toRoom(roomId).emit('reaction', reactionPayload);
       } catch (error) {
         logger.error(`"socketHandlers.js","reaction","Error: ${error.message}"`);
       }
@@ -648,7 +652,7 @@ const registerSocketHandlers = (io) => {
         };
 
         // Broadcast chat event to all clients in the room
-        io.to(roomId).emit('chat_message', chatPayload);
+        broadcaster.toRoom(roomId).emit('chat_message', chatPayload);
       } catch (error) {
         logger.error(`"socketHandlers.js","send_chat","Error: ${error.message}"`);
       }
