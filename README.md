@@ -120,7 +120,7 @@ sequenceDiagram
 
 The room creator is the host. Everyone else joins as a participant. Nobody can demote or remove the host, or change their own role.
 
-If the host leaves, a moderator takes over, or the first remaining participant if there are no moderators. A lost connection gets 30 seconds to come back first, so a brief network drop doesn't cost the host their role.
+If the host leaves, a moderator stands in, or the first remaining participant if there are no moderators. The room still remembers its real host: when they rejoin, they get the host role back and the stand-in returns to their previous role. Transferring host makes the receiver the real host, so the same rule then applies to them. A lost connection gets 30 seconds to come back first, so a brief network drop doesn't cost the host their role.
 
 ## WebSocket events
 
