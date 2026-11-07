@@ -1,7 +1,8 @@
 const { Sequelize } = require('sequelize');
 const config = require('./config.js');
 
-const env = process.env.NODE_ENV || 'local';
+// production uses DATABASE_URL with SSL; anything else (development, local, unset) uses the local DB_* settings.
+const env = process.env.NODE_ENV === 'production' ? 'production' : 'local';
 const dbConfig = config[env];
 
 const options = {
