@@ -26,6 +26,7 @@ Use a Neon PostgreSQL connection URL as `DATABASE_URL`, ideally in the same regi
 | `JWT_SECRET` | Yes | A long random string |
 | `CORS_ORIGIN` | Yes | The frontend URL, with no trailing slash |
 | `GROQ_API_KEY` | For the chatbot | Without it, `/chat` returns an error |
+| `REDIS_URL` | No | Redis connection URL for sharing room broadcasts between instances (Redis Pub/Sub). Use `rediss://` for TLS (Upstash needs it). Without it, the server runs as a single instance |
 
 ## Signup email function (Vercel)
 
@@ -60,4 +61,12 @@ Vite reads these at build time, so redeploy after changing them.
 
 ## Scaling beyond one server
 
-Rooms live in memory on a single server, so this deployment runs one instance. Running several would need the Socket.IO Redis adapter for broadcasts, and shared storage for room state and pending requests.
+The backend shares room broadcasts between instances with Redis Pub/Sub (`backend/src/websockets/RedisBroadcaster.js`). Set `REDIS_URL` and playback sync, chat and reactions are published on a Redis channel, so users connected to different instances still get each other's updates. If Redis can't be reached at startup, the server logs it and keeps running as a single instance. Instances that start at the same time take turns setting up the database tables, using a Postgres advisory lock.
+
+To run several instances:
+
+1. Point every instance at the same `REDIS_URL` and `DATABASE_URL`.
+2. Put a load balancer in front with sticky sessions (needed for the Socket.IO handshake).
+3. Each instance keeps its own PostgreSQL pool of up to 15 connections; keep the total under the database's connection limit.
+
+Live room state (participants and pending requests) is still kept in each instance's memory, so the next step for full multi-instance rooms is to store it in Redis as well.

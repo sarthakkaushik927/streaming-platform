@@ -5,6 +5,15 @@ Watch YouTube videos together in real time. When a host or moderator plays, paus
 **Live app:** https://syncstream-nine.vercel.app
 **Backend API docs:** https://syncstream-backend-dcc5.onrender.com/api-docs/
 
+**Demo accounts** (or sign up with any email; a verification code is sent to it):
+
+| Role to try | Email | Password |
+| --- | --- | --- |
+| Host | `sarthakkaushik927+host@gmail.com` | `12345678` |
+| Participant | `sarthakkaushik927+participant@gmail.com` | `12345678` |
+
+Sign in as the host in one browser and the participant in another (or a private window), then join the same room. The backend is on Render's free plan, so the first request after a quiet period can take up to a minute.
+
 ## Features
 
 - Create a room, or join one by room code or link
@@ -22,7 +31,7 @@ Watch YouTube videos together in real time. When a host or moderator plays, paus
 | Frontend | React, TypeScript, Vite, Tailwind CSS, Zustand |
 | Video | YouTube IFrame API (`react-youtube`) |
 | Backend | Node.js, Express |
-| Realtime | Socket.IO |
+| Realtime | Socket.IO, with Redis Pub/Sub for running several servers (optional) |
 | Database | PostgreSQL (Neon) with Sequelize |
 
 ## Run it locally
@@ -37,7 +46,7 @@ docker compose up -d   # starts PostgreSQL on port 5432
 pnpm install
 ```
 
-Copy `backend/.env.example` to `backend/.env`. The defaults match the Docker database.
+Copy `backend/.env.example` to `backend/.env`. The defaults match the Docker database. `REDIS_URL` is optional: leave it empty to run one server.
 
 ```bash
 pnpm dev
@@ -88,6 +97,7 @@ graph LR
 - `Room` holds participants, playback state and pending requests, and works out the live position.
 - `Participant` holds a user's socket ID and role.
 - `socketHandlers.js` authenticates sockets, checks permissions and handles events.
+- `RedisBroadcaster` shares room broadcasts between servers through Redis Pub/Sub when `REDIS_URL` is set.
 
 **Approval flow**
 
@@ -106,6 +116,31 @@ sequenceDiagram
     S-->>P: sync_state
     S-->>H: sync_state
 ```
+
+**Scaling to many users and rooms**
+
+One server keeps every user's connection, so a room broadcast reaches everyone. To serve 1,000+ users across 100+ rooms, the design runs several server instances behind a load balancer:
+
+```mermaid
+graph LR
+    U1[Users] --> L[Load balancer, sticky sessions]
+    U2[Users] --> L
+    L --> S1[Server 1]
+    L --> S2[Server 2]
+    L --> S3[Server 3]
+    S1 <-->|Pub/Sub| R[(Redis)]
+    S2 <-->|Pub/Sub| R
+    S3 <-->|Pub/Sub| R
+    S1 --> D[(PostgreSQL, pooled connections)]
+    S2 --> D
+    S3 --> D
+```
+
+- **Redis Pub/Sub (built in):** each server only knows its own connections. With `REDIS_URL` set, `RedisBroadcaster` sends each room event (playback sync, chat, reactions) to its own users and publishes it on a Redis channel, tagged with the server's ID. Every other server is subscribed, and delivers the event to its own users in that room, ignoring its own messages. So people in the same room can be on different servers.
+- **Safe startup:** when several servers start at once, a Postgres advisory lock makes them set up the tables one at a time.
+- **Load balancer:** spreads connections across servers. It needs sticky sessions so each browser keeps talking to the same server during the Socket.IO handshake.
+- **Connection pooling:** each server keeps a pool of up to 15 PostgreSQL connections instead of opening one per request.
+- **Next step:** live room state (who is in the room, roles, pending requests) is still held in each server's memory, so membership and role updates stay on the server that holds them. For full multi-server rooms that state would move into Redis too, so any server can answer for any room.
 
 ## Roles
 
@@ -162,7 +197,7 @@ The frontend runs on Vercel, the backend runs on Render, and the PostgreSQL data
 
 ## Trade-offs and limitations
 
-- Live room state, including pending requests, is kept in memory on one server. Playback state and removals are saved to PostgreSQL, but pending requests are lost if the server restarts, and running several servers would need something like the Socket.IO Redis adapter.
+- Live room state, including pending requests, is kept in memory on each server. Playback state and removals are saved to PostgreSQL, but pending requests are lost if the server restarts. Playback sync, chat and reactions already work across servers through Redis Pub/Sub; sharing the live room state between servers is the remaining step (see Scaling above).
 - Each browser buffers YouTube at its own speed, so small drift is possible. Players correct themselves on the next sync event when they are more than 2 seconds off.
 - Browsers can block autoplay with sound until the user interacts with the page.
 
